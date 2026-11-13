@@ -100,9 +100,20 @@ boundary (D8). See [docs/design.md](docs/design.md).
 
 - P1 — haystack as context-saver: complement LLMs, replace context with
   retrieval, POC + token/money savings. (DONE, live.)
-- P2 — use the finished haystack as substrate to develop crystallization
-  (muscle memory: repeated tasks hardened into automated, checked skills).
-- P3 — use P1+P2 together to develop the new architecture (self-crystallizing).
+- P2 — crystallization, haystack-style: plug the LLM (the agent) into the
+  architecture and crystallize ITS repeated behavior into automated, checked
+  components — muscle memory, not a rewrite. The canonical example: today
+  Diogo must tell the agent "use the notes-router skill" (and it still
+  sometimes has to be told); crystallized, the retrieval step fires
+  automatically on any notes question — no thinking, no asking. Skills,
+  learned corrections, and validators are the P2 building blocks. P2 lives
+  here because its product is the observed behavior log: which tasks
+  crystallized cleanly, which resisted, and why.
+- P3 — only after both P1 and P2 have run: autopsy haystack AND the P2
+  agent-in-the-loop setup — collect failures and the good parts of each —
+  and from that evidence develop the from-scratch architecture (no LLM at
+  the core; concepts related deterministically, prediction as glue only).
+  The design rules in docs/design.md are the first input to P3.
 
 Design stance (Diogo): models (and arguably minds) never make new concepts, only
 relate existing ones in never-related ways — the goal is the most flawless relation
