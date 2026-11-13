@@ -46,6 +46,16 @@ objective over proven components, not a token objective. The model's job is
 link selection; correctness comes from the blocks (proven) and the memory
 (re-derivable), not from generation.
 
+## Creativity, relocated
+
+Creativity is the semantic router. What makes it "creative" is the
+information retrieved from memory influencing the thinking/generation — new
+combos of old parts, surfaced by routing, not conjured by a token model. This
+is the design stance ("relate existing concepts in never-related ways")
+turned into architecture: the router composes never-related pairings because
+memory supplies the parts and the link choice supplies the novelty. Blocks
+and memory are never creative; the *selection* is.
+
 ## Relation to the design rules
 
 - D3 (relevance judgment O(1)-ish): the router IS the relevance judge, and it
