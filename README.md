@@ -113,7 +113,12 @@ boundary (D8). See [docs/design.md](docs/design.md).
   agent-in-the-loop setup — collect failures and the good parts of each —
   and from that evidence develop the from-scratch architecture (no LLM at
   the core; concepts related deterministically, prediction as glue only).
-  The design rules in docs/design.md are the first input to P3.
+  The design rules in docs/design.md are the first input to P3. The core
+  shape as spoken by Diogo 2026-11-13: [docs/p3-core.md](docs/p3-core.md) —
+  a chain of thought whose links are a semantic router that either injects
+  context from memory or calls a proven crystallization block; context IS
+  what the router injects; training becomes link-selection, not
+  next-token prediction; the only heavy compute is computing semantics.
 
 Design stance (Diogo): models (and arguably minds) never make new concepts, only
 relate existing ones in never-related ways — the goal is the most flawless relation
