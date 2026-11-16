@@ -166,6 +166,43 @@ as dominance on that distribution, never in the abstract.
 - [ ] Search for any published "online crystallization of verified sub-procedures"
       work again before claiming novelty (checked 2026-11-06: not found)
 
+## Status (2026-11-16): the loop runs end-to-end
+
+- **Plugin v0.3 — every crystal routes.** The chooser classifies one
+  single-question d1 call per candidate crystal, concurrently; candidates
+  mined from the behavior log fire as hints beside their parents; promotion
+  to `enforced` (0ms, bypasses the classifier) stays gate-earned:
+  evidence>=20, injections>=5, consumed>=80%, judge-correct>=80% over >=5,
+  age>=7d. **First live injection fired AND consumed on 2026-11-16**
+  (conf 0.94, notes->haystack); obedience instrument: 6/6 consumed, 0%
+  deviation. Acceptance criterion (learned the hard way): injections fired
+  AND consumed, never "it runs".
+- **Dynamic dimensions.** Per-crystal report in dogfood: conf mean/std
+  (trigger stability), near_miss (d1 yes-under-gate wobble class),
+  contention (multi-crystal arbitration pressure), context-judge score.
+  Task direction: the session's main task is distilled once and injected as
+  a reasoning scaffold; the task also biases dream priority (never the
+  firing math).
+- **Dreaming is genetic, not directed.** Mutation = uniform structural
+  operators on the genome; usage only decides who dreams; the failure
+  profile is a SELECTION signal judged by the gates, never generator
+  steering. Plugin dreams are a MOCK until sequence crystals fire — the
+  real genetic run lives in the spike.
+- **First real GA run (spikes/addition/ga.py).** Genome = executable
+  op-sequence; structural mutation; fitness axis (--fitness latency|space)
+  is the only human choice. Result: the GA rediscovered double-and-add
+  replay-proven under latency; the workload selected the 13-bit
+  representation; the space axis correctly refuses (seed is the primitive
+  floor). Same loop, different axis, opposite outcome.
+- **Golden fixture.** tests/golden.json freezes the working chooser
+  behavior; every change replays identical or re-blesses with a reason.
+- **Honest boundaries.** True constrained decoding is impossible from a
+  hook (pre-LLM injection is soft; the model can deviate — deviation rate
+  is measured). The d1 conf wobbles ±0.2 on identical input; gate 0.80,
+  per-crystal gates for supervised hints. Stage-2 issues (embeddings are a
+  model, chars/4 vs D8) catalogued in docs/haystack-crystallization-map.md
+  — P3 concerns, not plugin blockers.
+
 ## Prior art & credits
 
 DiamondHead is built on the shoulders of a lot of recent work. The closest
