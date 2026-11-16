@@ -14,13 +14,49 @@ import core  # noqa: E402
 MARKER = Path.home() / ".hermes" / "plugin-data" / "diamondhead" / ".dogfood-ts"
 
 
+def conf_stats(events, rid):
+    vals = [e["conf"] for e in events
+            if e.get("rule") == rid and isinstance(e.get("conf"), (int, float))]
+    if not vals:
+        return None
+    n = len(vals)
+    mean = sum(vals) / n
+    std = (sum((v - mean) ** 2 for v in vals) / n) ** 0.5
+    return mean, std, n
+
+
+def dream_direction(rid, stats, counts, rule_events):
+    """Mutation direction per concept: the family's failure profile IS the
+    dream's search distribution."""
+    near = rule_events.get(("near_miss", rid), 0)
+    inj = rule_events.get(("inject", rid), 0)
+    cont = rule_events.get(("contention", rid), 0)
+    dev = rule_events.get(("deviation", rid), 0)
+    if stats is None and near == 0:
+        return "no signal yet — dreams blind (priority: accumulate fires)"
+    if dev > 0 and dev >= inj * 0.2:
+        return "obedience failures dominate — dream sharper procedure wording"
+    if cont > 0 and cont >= inj:
+        return "contention dominates — dream trigger narrowing / arbitration"
+    if stats and stats[1] >= 0.15:
+        return (f"wobbly trigger (conf std {stats[1]:.2f}) — dream trigger "
+                f"paraphrases + more evidence before promotion")
+    if near > inj and near >= 3:
+        return "near-misses dominate — dream trigger paraphrase robustness"
+    if inj >= 3:
+        return "healthy — dream cost shape (hot/cold judge)"
+    return "young — accumulate measured fires first"
+
+
 def main():
-    rules = core.load_rules()
+    rules = core.live_rules(core.load_rules())
     print("== crystallization state ==")
     for r in rules:
-        if r.get("status") in ("candidate", "validated", "retracted", "hint"):
+        if r.get("status") in ("candidate", "validated", "retracted", "hint",
+                               "enforced"):
             rid = r["id"]
             ratio, inj = core.consumed_ratio(rid)
+            ratio = min(1.0, ratio)
             first = core.rule_first_seen(rid)
             age_d = f"{(core.time.time() - first) / 86400:.1f}" if first else "0 (no ts)"
             ev_n = core.rule_evidence(rid) or r.get("evidence_n", 0)
@@ -40,6 +76,27 @@ def main():
     if closed:
         print(f"  obedience: {cons}/{closed} injections consumed, "
               f"deviation rate {dev / closed:.0%}")
+    # dynamic dimension report: per-rule stability, misses, contention,
+    # and the dream direction each family's failure profile implies
+    rule_events = {}
+    for e in ev:
+        k = (e["kind"], e.get("rule"))
+        if k[1]:
+            rule_events[k] = rule_events.get(k, 0) + 1
+    print("== dimensions per crystal ==")
+    for r in rules:
+        rid = r["id"]
+        stats = conf_stats(ev, rid)
+        st = (f"conf mean {stats[0]:.2f} std {stats[1]:.2f} n{stats[2]}"
+              if stats else "conf: no data")
+        nm = rule_events.get(("near_miss", rid), 0)
+        ct = rule_events.get(("contention", rid), 0)
+        judged = [x for x in ev if x.get("kind") == "context_judge"
+                  and x.get("rule") == rid]
+        jok = (f"judge {sum(1 for x in judged if x.get('correct'))}/{len(judged)}"
+               if judged else "judge: none")
+        print(f"  {rid}: {st}, near_miss {nm}, contention {ct}, {jok}")
+        print(f"    dream: {dream_direction(rid, stats, counts, rule_events)}")
     if MARKER.exists():
         since = float(MARKER.read_text().strip())
         fresh = [e for e in ev if e["ts"] > since and e["kind"] in

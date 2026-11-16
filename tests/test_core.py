@@ -36,6 +36,41 @@ def fake_urlopen(payload, fail=False):
     return mock.MagicMock(return_value=R())
 
 
+def test_dimensions():
+    cfg = {"d1_url": "http://x", "haystack_url": "http://y",
+           "min_confidence": 0.80, "promote_n": 20}
+
+    # contention: two crystals above gate -> winner higher conf
+    core.init()
+    core.append_rule({"id": "auto-72307acd", "family": "research loop",
+                      "status": "candidate", "ts": time.time()})
+    core.BEHAVIOR_FILE.write_text("")
+    core.PENDING_INJECT = None
+    with mock.patch.object(core, "classify_multi", return_value={
+            "notes-routing": (True, 0.95, "yes", "d1-t"),
+            "auto-72307acd": (True, 0.90, "yes", "d1-t")}), \
+         mock.patch.object(core, "haystack_top", return_value=[]):
+        core.choose("search my notes for the llama release checklist", cfg)
+    ev = core.behavior_events()
+    check("contention logged with both rules",
+          any(e["kind"] == "contention" and e["winner"] == "notes-routing"
+              and e["runner_up"] == "auto-72307acd" for e in ev))
+
+    # near_miss: yes choice below gate -> logged with conf + gate, no inject
+    core.BEHAVIOR_FILE.write_text("")
+    core.PENDING_INJECT = None
+    with mock.patch.object(core, "classify_multi", return_value={
+            "notes-routing": (False, 0.72, "yes", "d1-t")}), \
+         mock.patch.object(core, "haystack_top", return_value=[]):
+        core.choose("where is the VPN note", cfg)
+    ev = core.behavior_events()
+    check("near_miss logged when yes under gate",
+          any(e["kind"] == "near_miss" and e["rule"] == "notes-routing"
+              and e["conf"] == 0.72 and e["gate"] == cfg["min_confidence"]
+              for e in ev))
+    check("no inject on near miss", not any(e["kind"] == "inject" for e in ev))
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="dh-test-")
     core.DATA = Path(tmp)
@@ -272,6 +307,7 @@ def main():
           and by_task["t2"].get("consumed") is True)
 
     n_fail = sum(1 for _, ok, _ in results if not ok)
+    test_dimensions()
     print(f"{len(results) - n_fail}/{len(results)} passed")
     sys.exit(1 if n_fail else 0)
 

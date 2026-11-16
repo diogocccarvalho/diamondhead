@@ -457,6 +457,12 @@ def choose(user_message, cfg, history=""):
         return None, 0.0, (time.monotonic() - t0) * 1000
     dt = (time.monotonic() - t0) * 1000
     hits = [(r, results[r["id"]]) for r in cand if results[r["id"]][0]]
+    for r in cand:
+        _hit, _conf, _choice, _model = results[r["id"]]
+        if _choice == "yes" and not results[r["id"]][0]:
+            log_event("near_miss", rule=r["id"], conf=round(_conf, 3),
+                      gate=r.get("min_conf") or cfg["min_confidence"],
+                      mh=mhash(user_message))
     if not hits:
         log_event("chooser_no",
                   confs={r["id"]: round(results[r["id"]][1], 3) for r in cand},
@@ -464,6 +470,12 @@ def choose(user_message, cfg, history=""):
                   ms=round(dt), mh=mhash(user_message))
         return None, 0.0, dt
     rule, (hit, conf, choice, model) = max(hits, key=lambda x: x[1][1])
+    if len(hits) > 1:
+        loser = max((h for h in hits if h[0]["id"] != rule["id"]),
+                    key=lambda x: x[1][1])
+        log_event("contention", winner=rule["id"], runner_up=loser[0]["id"],
+                  confs={h[0]["id"]: round(h[1][1], 3) for h in hits},
+                  mh=mhash(user_message))
     return inject_for(rule, user_message, cfg, conf, dt, history=history)
 
 
