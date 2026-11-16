@@ -19,8 +19,13 @@ def main():
     print("== crystallization state ==")
     for r in rules:
         if r.get("status") in ("candidate", "validated", "retracted", "hint"):
-            print(f"  {r['id']}: {r.get('status')} "
-                  f"(evidence {core.rule_evidence(r['id'])}/20)")
+            rid = r["id"]
+            ratio, inj = core.consumed_ratio(rid)
+            age_d = (core.time.time() - core.rule_first_seen(rid)) / 86400
+            print(f"  {rid}: {r.get('status')} "
+                  f"(evidence {core.rule_evidence(rid)}/20, "
+                  f"injections {inj}/{core.PROMOTE_MIN_INJ}, "
+                  f"consumed {ratio:.0%} vs >=80%, age {age_d:.1f}d vs >=7d)")
     ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()
           if l.strip()]
     counts = {}
