@@ -81,6 +81,24 @@ named block. Interface crystals differ from router crystals: the router
 selects between alternatives, the formation layer rewrites the payload of
 the selected path - different genome, different fitness, one pass each.
 
+Audit of the interface block (2026-11-16, four errors found and fixed):
+
+- I1 scope: no interface crystal without an OBSERVABLE downstream signal
+  (retrieval: winning note read; classifier: verdict vs behavior; LLM
+  prompts: none automatic - stay human/probe-judged until a probe exists).
+  Prevents the formation layer from becoming a vibes layer.
+- I2 anti-circularity: eval fixtures are RAW utterances, never
+  pre-rewritten; the gate is always raw -> rewrite -> callee against frozen
+  targets (hard_pairs.json is already raw - now deliberate).
+- I3 vocabulary over genomes: target-agnostic ops (filler-strip) promoted
+  once and shared; only target-specific ops carry their own gates. N x M
+  independent genomes would starve the evidence budget (~20+/crystal).
+- I4 runtime is frozen: chain selection happens OFFLINE in the dream loop;
+  runtime runs the deterministic winner (D7 think-once). The router never
+  picks rewrites per call - that would collapse formation into routing.
+- I5 no implicit chaining: rewrites are single-boundary; a bad rewrite at
+  boundary 1 must not silently mutate what boundary 2 receives.
+
 ## Relation to the design rules
 
 - D3 (relevance judgment O(1)-ish): the router IS the relevance judge, and it
