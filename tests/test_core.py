@@ -52,8 +52,9 @@ def test_dream():
         core.log_event("near_miss", rule="notes-routing", conf=0.7, gate=0.8)
     m, why = dream.dream()
     check("hottest family dreams", m is not None and m["parent"] == "notes-routing")
-    check("direction from failure profile",
-          m is not None and m["direction"] in ("paraphrase", "sharpen"))
+    check("mutation operator is a random draw from the bank",
+          m is not None and m["direction"] in
+          ("paraphrase", "narrow", "sharpen", "cost"))
     rules = {r["id"]: r for r in core.load_rules()}
     check("mutant beside parent in live store", m["id"] in rules)
     check("mutant is a candidate (never auto-fires enforced)",

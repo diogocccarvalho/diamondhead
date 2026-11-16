@@ -14,3 +14,11 @@
 {"ts": 1794843232.973932, "parent": "notes-routing", "mutant": "notes-routing-dsha-43a6cc", "direction": "sharpen", "variant": 1}
 {"ts": 1794843249.496539, "parent": "notes-routing", "mutant": "notes-routing-dsha-e5a4ba", "direction": "sharpen", "variant": 0}
 {"ts": 1794843249.4973955, "parent": "notes-routing", "mutant": "notes-routing-dsha-43a6cc", "direction": "sharpen", "variant": 1}
+{"ts": 1794843255.6924396, "parent": "notes-routing", "mutant": "notes-routing-dcos-2f3003", "direction": "cost", "variant": 0}
+{"ts": 1794843255.6932337, "parent": "notes-routing", "mutant": "notes-routing-dpar-2f2644", "direction": "paraphrase", "variant": 0}
+{"ts": 1794843264.608281, "parent": "notes-routing", "mutant": "notes-routing-dnar-543e42", "direction": "narrow", "variant": 0}
+{"ts": 1794843264.6090686, "parent": "notes-routing", "mutant": "notes-routing-dnar-5e7d81", "direction": "narrow", "variant": 1}
+{"ts": 1794843264.8852758, "parent": "notes-routing", "mutant": "notes-routing-dsha-e5a4ba", "direction": "sharpen", "variant": 0}
+{"ts": 1794843264.8860729, "parent": "notes-routing", "mutant": "notes-routing-dsha-43a6cc", "direction": "sharpen", "variant": 1}
+{"ts": 1794843265.1641245, "parent": "notes-routing", "mutant": "notes-routing-dpar-2f2644", "direction": "paraphrase", "variant": 0}
+{"ts": 1794843265.1649473, "parent": "notes-routing", "mutant": "notes-routing-dsha-e5a4ba", "direction": "sharpen", "variant": 0}
