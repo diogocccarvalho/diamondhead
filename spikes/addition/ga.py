@@ -178,12 +178,23 @@ def exhaustive_check(genome, limit_b=8192):
 
 
 # ---- negative-domain correctness gate ----
+def true_add(a, b):
+    r = a
+    if b >= 0:
+        for _ in range(b):
+            r += 1
+    else:
+        for _ in range(-b):
+            r -= 1
+    return r
+
+
 def negative_domain_check(genome):
     """Check correctness for a in {0, 5, -5}, b in -20..20."""
     results = {"passes": [], "fails": []}
     for a in [0, 5, -5]:
         for b in range(-20, 21):
-            expected = naive_add(a, b)
+            expected = true_add(a, b)
             got = interpret(genome, a, b)
             if got != expected:
                 results["fails"].append((a, b, expected, got))

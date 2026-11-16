@@ -384,3 +384,5 @@
 {"axis": "latency", "cheaper": true, "gen": 7, "identical": false, "kind": "verdict", "mutant": "ga-rand-b6466ec8", "ops": [["chunk", 16], ["addifbit", 7, -2], ["chunk", 5, 10], ["addifbit", 12, 64]], "outputs_sha": "4e2bd3b36b70", "promoted": false, "status": "rejected"}
 {"gen": 7, "kind": "generation_summary", "population": 8, "survivors": 0}
 {"champion": null, "champion_score": null, "first_champion_gen": null, "gen_survivor_counts": [0, 0, 0, 0, 0, 0, 0, 0], "kind": "random_founder_summary"}
+{"kind": "ledger_incident", "what": "pre-B3 records were overwritten by the B3 agent (append-only violation); raw provenance lost, summaries survive in docs/RESEARCH.md and READMEs; ledgers are append-only from now on"}
+{"kind": "negative_domain_verdict_v2", "finding": "prior negative experiment was VACUOUS: naive_add oracle is a no-op for b<=0 (range(b) empty) so everything passed; with true_add oracle, 0/300 random genomes survive - the op language cannot express negative addition (signed decrement loop missing); negative gate => naive-class champion only at ~16x latency cost (0.0287 base vs 0.0018 chunk cascade), and requires a new primitive"}
