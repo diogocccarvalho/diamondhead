@@ -187,3 +187,20 @@ any LLM), form the input that maximizes that callee's measured performance.
 - Finish-everything wave dispatched: B3 looping primitives (spike),
   distro-cluster breakdown + rewrite-op prototype (haystack), C-sweeps
   (haystack) - new projects wait until these land.
+
+## Two creation/fitness laws (Diogo, 2026-11-16)
+
+- CRYSTALS = PROVABLE, NOT REPETITION. Repetition-with-success measures
+  BEHAVIORAL PRECISION (a fitness axis, one evidence class); proof is a
+  different class (oracle replay over a stated domain - spike law). Two
+  tiers: proof-tier crystals (tool-sequence genomes, derivations - promote
+  means PROVEN) and routing crystals (no oracle exists; correctness IS
+  downstream behavior - promote means enforced-BY-MEASUREMENT, never
+  true). The SPRT per-use gate belongs to tier 2 and is named as such.
+- FITNESS ONLY IMPROVES, NEVER CREATES. Creation channels: capture
+  (stated insight - scripts/capture.py: 'I did this by thinking this way'
+  -> candidate + PROOF obligation in docs/captures.md; oracle over the
+  steps -> proof-tier graduation, else honest capture-only label), mine
+  (observed repetition -> candidate), prior art (informed seeds - the A6
+  boundary). Dream/GA mutation operates ONLY on existing crystals; fitness
+  readings rank and gate what exists and never invent one.

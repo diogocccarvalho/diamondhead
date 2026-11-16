@@ -1,5 +1,6 @@
 import hashlib
 import json
+import math
 import re
 import threading
 import time
@@ -119,30 +120,78 @@ def judge_ratio(rule_id):
     return sum(1 for e in judged if e.get("correct")) / len(judged), len(judged)
 
 
-def enforce_if_ready(rule_id, promote_n):
+def enforce_if_ready(rule_id, promote_n, cfg=None):
+    """Per-use sequential gate (SPRT): promote the moment precision is
+    decisive, futility-demote when it fails - no wall-clock age gate."""
     n = rule_evidence(rule_id)
     ratio, inj = consumed_ratio(rule_id)
     jr, nj = judge_ratio(rule_id)
-    if jr is None:
-        return False
-    first = rule_first_seen(rule_id)
-    if first is None:
-        return False
-    age = time.time() - first
-    if n >= promote_n and inj >= PROMOTE_MIN_INJ and ratio >= PROMOTE_MIN_CONSUMED \
-            and jr >= PROMOTE_MIN_CONSUMED and age >= PROMOTE_MIN_AGE_S:
+    verdict, llr, uses = sequential_verdict(rule_id, cfg or {})
+    if verdict == "promote":
         append_rule({"id": rule_id, "status": "enforced", "ts": time.time(),
                      "evidence_n": n, "consumed_ratio": round(ratio, 3),
-                     "injections": inj})
+                     "injections": inj, "seq_llr": round(llr, 3),
+                     "seq_uses": uses})
+        bump_version(rule_id, rule_fields(
+            next((r for r in load_rules() if r.get("id") == rule_id), {})))
         log_event("promote", rule=rule_id, evidence_n=n,
-                  consumed_ratio=round(ratio, 3), injections=inj)
+                  consumed_ratio=round(ratio, 3), injections=inj,
+                  seq_llr=round(llr, 3), seq_uses=uses)
         return True
+    if verdict == "demote":
+        append_rule({"id": rule_id, "status": "seq_demoted", "ts": time.time(),
+                     "seq_llr": round(llr, 3), "seq_uses": uses})
+        log_event("seq_demote", rule=rule_id, seq_llr=round(llr, 3),
+                  seq_uses=uses)
+        return False
     return False
 
 
 def append_rule(rec):
     with open(RULES_FILE, "a") as f:
         f.write(json.dumps(rec) + "\n")
+
+
+# sequential enforcement gate (SPRT, replaces the fixed-count/calendar gate):
+# each injection is one Bernoulli trial (consumed AND judge-correct = 1).
+# H1 precision>=SEQ_P1 vs H0 precision<=SEQ_P0; promote at upper bound,
+# futility-demote at lower bound; verdicts valid at ANY sample size (Wald).
+SEQ_P1, SEQ_P0 = 0.9, 0.6
+SEQ_ALPHA, SEQ_BETA = 0.05, 0.20
+SEQ_BURN_IN = 8
+SEQ_A = math.log((1 - SEQ_BETA) / SEQ_ALPHA)   # ~2.944
+SEQ_B = math.log(SEQ_BETA / (1 - SEQ_ALPHA))   # ~-2.944
+
+
+def injection_outcomes(rule_id, cfg):
+    """Ordered 0/1 outcomes per injection of rule_id: 1 = consumed within
+    window AND context_judge correct for the same message hash."""
+    ev = behavior_events()
+    cons_mhs = {e.get("mh") for e in ev if e.get("kind") == "consumed"}
+    judge_ok = {e.get("mh") for e in ev if e.get("kind") == "context_judge"
+                and e.get("correct") is True}
+    out = []
+    for e in ev:
+        if e.get("kind") != "inject" or e.get("rule") != rule_id:
+            continue
+        out.append(1 if (e.get("mh") in cons_mhs
+                         and e.get("mh") in judge_ok) else 0)
+    return out
+
+
+def sequential_verdict(rule_id, cfg):
+    """('promote'|'demote'|None, llr, n) - SPRT over injection outcomes."""
+    outs = injection_outcomes(rule_id, cfg)
+    n = len(outs)
+    if n < SEQ_BURN_IN:
+        return None, 0.0, n
+    llr = sum(math.log(SEQ_P1 / SEQ_P0) if o
+              else math.log((1 - SEQ_P1) / (1 - SEQ_P0)) for o in outs)
+    if llr >= SEQ_A:
+        return "promote", llr, n
+    if llr <= SEQ_B:
+        return "demote", llr, n
+    return None, llr, n
 
 
 # contract versioning: a crystal's operative fields hash into contract_sha;

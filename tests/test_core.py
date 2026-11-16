@@ -238,6 +238,46 @@ def test_contracts():
           any(p["id"] == "notes-routing" for p in problems))
 
 
+def test_sequential_gate():
+    core.init()
+    reset_all()
+    cfg = {"d1_url": "http://x", "haystack_url": "http://y",
+           "min_confidence": 0.80, "promote_n": 20}
+    # burn-in: no verdict below 8 uses
+    check("no verdict before burn-in",
+          core.sequential_verdict("notes-routing", cfg)[0] is None)
+    # 8 all-success injections + judge-correct -> promote
+    for i in range(8):
+        core.log_event("inject", rule="notes-routing", conf=0.9,
+                       mh="mh%d" % i)
+        core.log_event("consumed", tool="haystack_top", mh="mh%d" % i)
+        core.log_event("context_judge", rule="notes-routing", correct=True,
+                       conf=0.9, mh="mh%d" % i)
+    v, llr, n = core.sequential_verdict("notes-routing", cfg)
+    check("8 clean uses promote", v == "promote" and n == 8)
+    # futility: failures drive demote fast
+    reset_all()
+    for i in range(8):
+        core.log_event("inject", rule="notes-routing", conf=0.9,
+                       mh="f%d" % i)
+    v, llr, n = core.sequential_verdict("notes-routing", cfg)
+    check("8 unconsumed injections demote", v == "demote" and n == 8)
+    # enforce_if_ready wires the verdict to the store
+    reset_all()
+    core.append_rule({"id": "auto-d0b974f8", "family": "code-change loop",
+                      "status": "hint", "ts": core.time.time()})
+    for i in range(8):
+        core.log_event("inject", rule="auto-d0b974f8", conf=0.9,
+                       mh="p%d" % i)
+        core.log_event("consumed", tool="patch", mh="p%d" % i)
+        core.log_event("context_judge", rule="auto-d0b974f8", correct=True,
+                       conf=0.9, mh="p%d" % i)
+    ok = core.enforce_if_ready("auto-d0b974f8", 20, cfg)
+    st = core.replay_rules()["auto-d0b974f8"]
+    check("per-use promotion binds enforced + version",
+          ok and st.get("status") == "enforced" and st.get("contract_sha"))
+
+
 def main():
     core.SYNC_JUDGE = True
     tmp = tempfile.mkdtemp(prefix="dh-test-")
@@ -332,22 +372,30 @@ def main():
     rules_now = core.load_rules()
     check("rule still hint before age/consume gates",
           core.live_rules(rules_now)[0]["status"] == "hint")
-    # simulate age + consumed history -> promote
-    for i, e in enumerate(ev):
-        if e["kind"] == "inject":
-            cons = {"ts": e["ts"] + 10, "kind": "consumed",
-                    "tool": "skill_view", "task": f"c{i}"}
-            core.BEHAVIOR_FILE.open("a").write(json.dumps(cons) + "\n")
-    with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-t")}), \
-         mock.patch.object(core, "haystack_top", return_value=[]), \
-         mock.patch.object(core, "PROMOTE_MIN_AGE_S", 0), \
-         mock.patch.object(core, "PROMOTE_MIN_INJ", 3), \
-         mock.patch.object(core, "PROMOTE_MIN_JUDGED", 0):
-        core.RULES_FILE.parent.joinpath("behavior.jsonl").open("a").write(
-            json.dumps({"ts": time.time(), "kind": "context_judge",
-                        "rule": "notes-routing", "correct": True,
-                        "conf": 0.9, "model": "d1-t", "mh": "x"}) + "\n")
-        core.choose("where is the VPN note", cfg2)
+    # clean per-use outcomes -> sequential gate promotes (no age gate)
+    inj = [e for e in ev if e["kind"] == "inject"]
+    for i, e in enumerate(inj):
+        core.BEHAVIOR_FILE.open("a").write(json.dumps(
+            {"ts": e["ts"] + 10, "kind": "consumed",
+             "tool": "skill_view", "task": f"c{i}", "mh": e["mh"]}) + "\n")
+        core.BEHAVIOR_FILE.open("a").write(json.dumps(
+            {"ts": e["ts"] + 11, "kind": "context_judge",
+             "rule": "notes-routing", "correct": True, "conf": 0.9,
+             "model": "d1-t", "mh": e["mh"]}) + "\n")
+    while len(core.injection_outcomes("notes-routing", cfg2)) < 8:
+        with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-t")}), \
+             mock.patch.object(core, "haystack_top", return_value=[]):
+            core.choose("where is the VPN note", cfg2)
+        ev2 = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
+        last = [e for e in ev2 if e["kind"] == "inject"][-1]
+        n_inj = len(core.injection_outcomes("notes-routing", cfg2))
+        core.BEHAVIOR_FILE.open("a").write(json.dumps(
+            {"ts": last["ts"] + 10, "kind": "consumed",
+             "tool": "skill_view", "task": "c", "mh": last["mh"]}) + "\n")
+        core.BEHAVIOR_FILE.open("a").write(json.dumps(
+            {"ts": last["ts"] + 11, "kind": "context_judge",
+             "rule": "notes-routing", "correct": True, "conf": 0.9,
+             "model": "d1-t", "mh": last["mh"]}) + "\n")
     ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
     check("promote event fired", any(e["kind"] == "promote" for e in ev))
     st = core.replay_rules()["notes-routing"]
@@ -480,6 +528,7 @@ def main():
     test_dream()
     test_task_direction()
     test_contracts()
+    test_sequential_gate()
 
     # golden replay: what works today must not silently change
     import subprocess
