@@ -99,6 +99,14 @@ Audit of the interface block (2026-11-16, four errors found and fixed):
 - I5 no implicit chaining: rewrites are single-boundary; a bad rewrite at
   boundary 1 must not silently mutate what boundary 2 receives.
 
+Sequencing decision (Diogo, 2026-11-16): the formation layer is ITS OWN
+project, not folded into current workstreams - do not build yet. Scope:
+implemented ONCE, deployed across all layers - as a plugin proof of
+concept (diamondhead + haystack boundaries) and natively in P4 per the
+interface block above. Build trigger: after the finish-everything wave
+lands and the prototype nursery (haystack distro-cluster case) has
+measured numbers.
+
 ## Relation to the design rules
 
 - D3 (relevance judgment O(1)-ish): the router IS the relevance judge, and it

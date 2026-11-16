@@ -852,3 +852,32 @@
 {"gen": 0, "kind": "generation_summary", "population": 8, "survivors": 0}
 {"crash": "IndexError: list index out of range", "gen": 1, "kind": "domain_probe"}
 {"axis": "latency", "cheaper": true, "gen": 1, "identical": false, "kind": "verdict", "mutant": "ga-rand-cc60f0a4", "ops": [["addifbit", 5, 6], ["add", 0, 2], ["addifbit", 0, 8]], "outputs_sha": "99a87f0ad8f8", "promoted": false, "status": "rejected"}
+{"axis": "latency", "cheaper": true, "gen": 1, "identical": false, "kind": "verdict", "mutant": "ga-rand-9bf5ee63", "ops": [["while_chunk", 6]], "outputs_sha": "182999c42992", "promoted": false, "status": "rejected"}
+{"axis": "latency", "cheaper": true, "gen": 1, "identical": false, "kind": "verdict", "mutant": "ga-rand-4dacaea9", "ops": [["while_chunk", 8, 10], ["addifbit", 11, 16]], "outputs_sha": "25d9e64b3aaf", "promoted": false, "status": "rejected"}
+{"crash": "IndexError: list index out of range", "gen": 1, "kind": "domain_probe"}
+{"axis": "latency", "cheaper": true, "gen": 1, "identical": false, "kind": "verdict", "mutant": "ga-rand-8e875466", "ops": [["addifbit", 3, -2], ["while_chunk", 12, 64], ["add", 6, 64]], "outputs_sha": "29f2a6ab4fa6", "promoted": false, "status": "rejected"}
+{"crash": "IndexError: list index out of range", "gen": 1, "kind": "domain_probe"}
+{"crash": "IndexError: list index out of range", "gen": 1, "kind": "domain_probe"}
+{"gen": 1, "kind": "generation_summary", "population": 8, "survivors": 0}
+{"axis": "latency", "cheaper": true, "gen": 2, "identical": false, "kind": "verdict", "mutant": "ga-rand-47e0f735", "ops": [["while_chunk", 4, 64], ["addifbit", 3, 16], ["add", 3], ["add", 0, -2]], "outputs_sha": "caeefdc49f32", "promoted": false, "status": "rejected"}
+{"crash": "ValueError: negative shift count", "gen": 2, "kind": "domain_probe"}
+{"axis": "latency", "cheaper": true, "gen": 2, "identical": false, "kind": "verdict", "mutant": "ga-rand-53f8de23", "ops": [["addifbit", 1, -4]], "outputs_sha": "7a7b352e7263", "promoted": false, "status": "rejected"}
+{"crash": "ValueError: negative shift count", "gen": 2, "kind": "domain_probe"}
+{"crash": "IndexError: list index out of range", "gen": 2, "kind": "domain_probe"}
+{"axis": "latency", "cheaper": true, "gen": 2, "identical": false, "kind": "verdict", "mutant": "ga-rand-258edc50", "ops": [["addifbit", 1, 8], ["addifbit", 9, 6]], "outputs_sha": "306e2f1282da", "promoted": false, "status": "rejected"}
+{"axis": "latency", "cheaper": true, "gen": 2, "identical": false, "kind": "verdict", "mutant": "ga-rand-cdbd96e4", "ops": [["addifbit", 2, 16]], "outputs_sha": "b8346ba51ed5", "promoted": false, "status": "rejected"}
+{"axis": "latency", "cheaper": true, "gen": 2, "identical": false, "kind": "verdict", "mutant": "ga-rand-e14f363b", "ops": [["addifbit", 4, -4]], "outputs_sha": "9a272b925d47", "promoted": false, "status": "rejected"}
+{"gen": 2, "kind": "generation_summary", "population": 8, "survivors": 0}
+{"axis": "latency", "cheaper": true, "gen": 3, "identical": false, "kind": "verdict", "mutant": "ga-rand-3cecb299", "ops": [["addifbit", 8, -1], ["add", 0]], "outputs_sha": "a147b31448c5", "promoted": false, "status": "rejected"}
+{"crash": "IndexError: list index out of range", "gen": 3, "kind": "domain_probe"}
+{"axis": "latency", "cheaper": true, "gen": 3, "identical": false, "kind": "verdict", "mutant": "ga-rand-55fb1414", "ops": [["add", 12, 10], ["chunk", 10, 2]], "outputs_sha": "2e9ca2b2a525", "promoted": false, "status": "rejected"}
+{"axis": "latency", "cheaper": true, "gen": 3, "identical": false, "kind": "verdict", "mutant": "ga-rand-d10f7e3b", "ops": [["addifbit", 3, 10], ["addifbit", 2, 3], ["addifbit", 4, 4]], "outputs_sha": "7944ab3c3166", "promoted": false, "status": "rejected"}
+{"axis": "latency", "cheaper": true, "gen": 3, "identical": false, "kind": "verdict", "mutant": "ga-rand-d98fe5c5", "ops": [["add", 3, 10]], "outputs_sha": "ffb31a6b3d57", "promoted": false, "status": "rejected"}
+{"axis": "latency", "cheaper": false, "gen": 3, "identical": false, "kind": "verdict", "mutant": "ga-rand-541c9470", "ops": [["addifbit", 10, 8], ["chunk", 6], ["while_chunk", 1, 16], ["chunk", 2]], "outputs_sha": "e5362b79f46a", "promoted": false, "status": "rejected"}
+{"axis": "latency", "cheaper": true, "gen": 3, "identical": false, "kind": "verdict", "mutant": "ga-rand-a425d240", "ops": [["chunk", 6, -4], ["add", 8, 6], ["addifbit", 6, 2], ["addifbit", 10, 10]], "outputs_sha": "2fa44ed96afe", "promoted": false, "status": "rejected"}
+{"axis": "latency", "cheaper": true, "gen": 3, "identical": false, "kind": "verdict", "mutant": "ga-rand-97239ab6", "ops": [["addifbit", 10, 64]], "outputs_sha": "880e300eec85", "promoted": false, "status": "rejected"}
+{"gen": 3, "kind": "generation_summary", "population": 8, "survivors": 0}
+{"axis": "latency", "cheaper": true, "gen": 4, "identical": false, "kind": "verdict", "mutant": "ga-rand-36138896", "ops": [["chunk", 6, 0], ["addifbit", 6, -2], ["addifbit", 3, 64]], "outputs_sha": "0fef7f84b8fa", "promoted": false, "status": "rejected"}
+{"crash": "IndexError: list index out of range", "gen": 4, "kind": "domain_probe"}
+{"crash": "ValueError: negative shift count", "gen": 4, "kind": "domain_probe"}
+{"crash": "IndexError: list index out of range", "gen": 4, "kind": "domain_probe"}
