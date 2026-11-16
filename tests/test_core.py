@@ -140,6 +140,10 @@ def main():
          mock.patch.object(core, "PROMOTE_MIN_AGE_S", 0), \
          mock.patch.object(core, "PROMOTE_MIN_INJ", 3), \
          mock.patch.object(core, "PROMOTE_MIN_JUDGED", 0):
+        core.RULES_FILE.parent.joinpath("behavior.jsonl").open("a").write(
+            json.dumps({"ts": time.time(), "kind": "context_judge",
+                        "rule": "notes-routing", "correct": True,
+                        "conf": 0.9, "model": "d1-t", "mh": "x"}) + "\n")
         core.choose("where is the VPN note", cfg2)
     ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
     check("promote event fired", any(e["kind"] == "promote" for e in ev))
