@@ -47,6 +47,8 @@ def main():
     check("slash command skipped", not core.plausibly_notes("/new"))
     check("greeting skipped", not core.plausibly_notes("hey"))
     check("short skipped", not core.plausibly_notes("ok thanks"))
+    check("greeting with question NOT skipped",
+          core.plausibly_notes("no, actually where are my VPN notes from last tuesday?"))
     check("real question passes", core.plausibly_notes("where did I put the VPN note"))
 
     # rules store
@@ -68,12 +70,12 @@ def main():
 
     # chooser: classifier no
     cfg = {"d1_url": "http://x", "haystack_url": "http://y", "min_confidence": 0.85}
-    with mock.patch.object(core, "classify", return_value=(False, 0.4)):
+    with mock.patch.object(core, "classify", return_value=(False, 0.4, "")):
         text, conf, ms = core.choose("what did I do Friday", cfg)
     check("classifier-no returns None", text is None)
 
     # chooser: hit with haystack paths
-    with mock.patch.object(core, "classify", return_value=(True, 0.95)), \
+    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-test")), \
          mock.patch.object(core, "haystack_top", return_value=["notes/vpn.md"]):
         text, conf, ms = core.choose("where is the VPN note", cfg)
     check("hit returns injection", text is not None and "notes-router" in text)
@@ -108,7 +110,7 @@ def main():
         check("haystack list response parsed", core.haystack_top("q", "http://y") == ["a/b.md"])
 
     # haystack down still injects route
-    with mock.patch.object(core, "classify", return_value=(True, 0.95)), \
+    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-test")), \
          mock.patch.object(core, "haystack_top",
                            side_effect=urllib.error.URLError("down")):
         text, conf, ms = core.choose("where is the VPN note", cfg)

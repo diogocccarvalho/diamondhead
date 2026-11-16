@@ -5,6 +5,8 @@ Mutants are dreamed at random from a grammar of additions; the replay gate
 (byte-identical over the workload distribution + measured cheaper) decides
 promotion. Append-only ledger records every verdict.
 """
+import hashlib
+import inspect
 import json
 import random
 import time
@@ -156,6 +158,8 @@ def main():
         log({
             "kind": "verdict",
             "mutant": name,
+            "code_sha": __import__("hashlib").sha256(
+                inspect.getsource(fn).encode()).hexdigest()[:12],
             "outputs_sha": __import__("hashlib").sha256(
                 repr(out).encode()).hexdigest()[:12],
             "oracle_sha": __import__("hashlib").sha256(

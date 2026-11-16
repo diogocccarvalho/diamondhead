@@ -85,7 +85,7 @@ def rule_evidence(rule_id):
     return n
 
 
-SKIP_RE = re.compile(r"^\s*/|^(!|hi|hey|ok|thanks|yes|no)\b.{0,12}$", re.I)
+SKIP_RE = re.compile(r"^\s*/|^(!|hi|hey|ok|thanks|yes|no)\b[^?]{0,12}$", re.I)
 MIN_LEN = 12
 
 
@@ -140,10 +140,12 @@ def classify(text, url, min_conf):
         url, data=json.dumps(body).encode(),
         headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=D1_TIMEOUT) as r:
-        ans = json.loads(r.read())["answers"]["q"]
+        payload = json.loads(r.read())
+    ans = payload["answers"]["q"]
     choice = ans.get("choice")
     conf = float(ans.get("confidence", 0.0))
-    return choice == "yes" and conf >= min_conf, conf
+    model = payload.get("model") or ans.get("model") or ""
+    return choice == "yes" and conf >= min_conf, conf, model
 
 
 def haystack_top(text, url, k=3):
@@ -176,7 +178,7 @@ def log_event(kind, **fields):
 
 
 def mhash(text):
-    return hashlib.sha1(text.encode("utf-8", "replace")).hexdigest()[:12]
+    return hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()[:12]
 
 
 def choose(user_message, cfg):
@@ -185,14 +187,15 @@ def choose(user_message, cfg):
         return None, 0.0, 0.0
     t0 = time.monotonic()
     try:
-        hit, conf = classify(user_message, cfg["d1_url"], cfg["min_confidence"])
+        hit, conf, model = classify(user_message, cfg["d1_url"], cfg["min_confidence"])
     except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as e:
         log_event("chooser_error", err=str(e)[:120], mh=mhash(user_message))
         return None, 0.0, (time.monotonic() - t0) * 1000
     dt = (time.monotonic() - t0) * 1000
     rule = rules[0]
     if not hit:
-        log_event("chooser_no", conf=round(conf, 3), ms=round(dt), mh=mhash(user_message))
+        log_event("chooser_no", conf=round(conf, 3), ms=round(dt),
+                  model=model[:60], mh=mhash(user_message))
         return None, conf, dt
     paths = []
     try:
@@ -203,7 +206,8 @@ def choose(user_message, cfg):
     global LAST_INJECT_TS
     LAST_INJECT_TS = time.time()
     log_event("inject", rule=rule["id"], conf=round(conf, 3),
-              ms=round(dt), paths=paths, mh=mhash(user_message))
+              ms=round(dt), chars=len(INJECT_TEMPLATE) + sum(len(p) for p in paths),
+              paths=paths, mh=mhash(user_message))
     text = INJECT_TEMPLATE
     if paths:
         text += "\nTop matching notes:\n" + "\n".join(f"- {p}" for p in paths)
