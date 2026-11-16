@@ -26,7 +26,7 @@ def main():
             print(f"  {rid}: {r.get('status')} "
                   f"(evidence {core.rule_evidence(rid)}/20, "
                   f"injections {inj}/{core.PROMOTE_MIN_INJ}, "
-                  f"consumed {ratio:.0%} vs >=80%, age {age_d:.1f}d vs >=7d)")
+                  f"consumed {ratio:.0%} vs >=80%, age {age_d}d vs >=7d)")
     ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()
           if l.strip()]
     counts = {}
