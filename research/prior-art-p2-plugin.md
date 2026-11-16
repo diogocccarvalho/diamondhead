@@ -26,14 +26,31 @@ Some arXiv IDs were not re-verified by the maintainer.
    AnyThing2Skill, SPEM, PLVR. Extract procedures from traces into executable/portable
    artifacts, verification-gated — but offline/batch, artifacts stay under retrieval.
 
-## Novelty verdict (subagent's, pending citation verification)
-"Online crystallization of verified sub-procedures" — a procedure starting as a scored
-candidate, accumulating verified-use evidence in an append-only ledger, and transitioning at
-a threshold (~20 verified executions over a week) from scored selection to deterministic
-auto-fire — is NOT published in this combination. The two separately-published halves:
-procedure extraction + verification-gated admission (Voyager/Zep/SCBT line), and
-deterministic runtime artifacts (SCBT). Nobody does the online PROMOTION transition —
-the move from "needs scoring" to "bypasses scoring" on live traffic.
+7. **RSPM — Recursive Self-Pruning Memory** (arXiv:2610.25561, Oct 2026). Constraint
+   promotion instance→category→universal after holding in 3-5 contexts; offline sleep
+   cycles only.
+8. **WikiSkill** (arXiv:2608.27454, Aug 2026). Raw→wiki→skills workspace; proposal gated
+   by R > R_best with rollback; offline, held-out tasks.
+9. **AutoSkill / SkillEvo** (github ECNU-ICALK/AutoSkill, Mar 2026). Replay-driven
+   mutation; five-gate AND promotion vs champion (quality/trigger/cost/latency/regression);
+   offline replay pool.
+
+## Novelty verdict (RE-VERIFIED 2026-11-16, second research pass — claim NARROWED)
+First pass said "promotion past scoring is unclaimed". Second pass (2026-11-16) found
+threshold promotion IS now published, offline: Zep Agent Skills is a full paper
+(arXiv:2611.01386) with gated auto-admission; RSPM (arXiv:2610.25561) promotes constraints
+instance→category→universal after 3-5 contexts; WikiSkill (arXiv:2608.27454) gates proposals
+with R > R_best + rollback; AutoSkill/SkillEvo (github ECNU-ICALK) promotes on a five-gate
+AND (quality/trigger/cost/latency/regression) vs champion — ALL offline (sleep cycles,
+replay pools, held-out evals, scheduled compilation).
+
+SURVIVING CLAIM (narrow): procedure-level capture→compile→threshold→promotion DRIVEN BY
+LIVE INFERENCE TRAFFIC in a single closed loop — the runtime watches its own traces and
+deterministically auto-fires a newly-promoted crystal onto the active execution path. No
+surveyed work (incl. Microsoft Foundry canary/promotion and agent-canary, which are
+whole-agent versioning, not learned-procedure promotion) does this. Batch threshold
+admission is no longer ours. Every writeup must say "live-traffic promotion", never
+bare "online promotion".
 
 Notable inversion: SCBT is compile-on-failure; DiamondHead is compile-on-success.
 
