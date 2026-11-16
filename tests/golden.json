@@ -1,0 +1,173 @@
+[
+ {
+  "conf": 0.94,
+  "events": [
+   {
+    "kind": "chooser_skip",
+    "mh": "1a0da0531b34",
+    "rules": [
+     "auto-72307acd"
+    ]
+   },
+   {
+    "chars": 293,
+    "conf": 0.94,
+    "kind": "inject",
+    "mh": "1a0da0531b34",
+    "ms": 0,
+    "paths": [
+     "a/vpn.md",
+     "a/distro.md"
+    ],
+    "rule": "notes-routing"
+   }
+  ],
+  "returned": "9bb37a57dd83",
+  "scenario": "notes_hit"
+ },
+ {
+  "conf": 0.0,
+  "events": [
+   {
+    "kind": "chooser_skip",
+    "mh": "64124e4fc66d",
+    "rules": [
+     "auto-72307acd"
+    ]
+   },
+   {
+    "choices": {
+     "notes-routing": "no"
+    },
+    "confs": {
+     "notes-routing": 0.4
+    },
+    "kind": "chooser_no",
+    "mh": "64124e4fc66d",
+    "ms": 0
+   }
+  ],
+  "returned": null,
+  "scenario": "notes_no"
+ },
+ {
+  "conf": 0.0,
+  "events": [
+   {
+    "kind": "chooser_skip",
+    "mh": "fce06636a280",
+    "rules": [
+     "auto-72307acd"
+    ]
+   },
+   {
+    "conf": 0.72,
+    "gate": 0.8,
+    "kind": "near_miss",
+    "mh": "fce06636a280",
+    "rule": "notes-routing"
+   },
+   {
+    "choices": {
+     "notes-routing": "yes"
+    },
+    "confs": {
+     "notes-routing": 0.72
+    },
+    "kind": "chooser_no",
+    "mh": "fce06636a280",
+    "ms": 0
+   }
+  ],
+  "returned": null,
+  "scenario": "near_miss"
+ },
+ {
+  "conf": 0.95,
+  "events": [
+   {
+    "confs": {
+     "auto-72307acd": 0.9,
+     "notes-routing": 0.95
+    },
+    "kind": "contention",
+    "mh": "bfb2e704cad5",
+    "runner_up": "auto-72307acd",
+    "task_fams": [],
+    "task_winner": false,
+    "winner": "notes-routing"
+   },
+   {
+    "chars": 274,
+    "conf": 0.95,
+    "kind": "inject",
+    "mh": "bfb2e704cad5",
+    "ms": 0,
+    "paths": [],
+    "rule": "notes-routing"
+   }
+  ],
+  "returned": "b0d7b8b5d228",
+  "scenario": "contention"
+ },
+ {
+  "conf": 0.91,
+  "events": [
+   {
+    "kind": "chooser_skip",
+    "mh": "233496b16ace",
+    "rules": [
+     "auto-72307acd"
+    ]
+   },
+   {
+    "dropped": 1,
+    "kept": 1,
+    "kind": "context_dedup",
+    "mh": "233496b16ace",
+    "rule": "notes-routing"
+   },
+   {
+    "chars": 284,
+    "conf": 0.91,
+    "kind": "inject",
+    "mh": "233496b16ace",
+    "ms": 0,
+    "paths": [
+     "a/fresh.md"
+    ],
+    "rule": "notes-routing"
+   }
+  ],
+  "returned": "7d6e52efed0a",
+  "scenario": "dedup_hit"
+ },
+ {
+  "conf": 0.93,
+  "events": [
+   {
+    "kind": "chooser_skip",
+    "mh": "e41952d0924a",
+    "rules": [
+     "auto-72307acd"
+    ]
+   },
+   {
+    "err": "<urlopen error down>",
+    "kind": "haystack_error",
+    "mh": "e41952d0924a"
+   },
+   {
+    "chars": 274,
+    "conf": 0.93,
+    "kind": "inject",
+    "mh": "e41952d0924a",
+    "ms": 0,
+    "paths": [],
+    "rule": "notes-routing"
+   }
+  ],
+  "returned": "b0d7b8b5d228",
+  "scenario": "haystack_down"
+ }
+]

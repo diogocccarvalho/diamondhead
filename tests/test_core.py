@@ -371,6 +371,15 @@ def main():
     test_dimensions()
     test_dream()
     test_task_direction()
+
+    # golden replay: what works today must not silently change
+    import subprocess
+    g = subprocess.run([sys.executable, str(Path(__file__).parent /
+                                            "make_golden.py")],
+                       capture_output=True, text=True, timeout=60)
+    check("golden behavior replay matches blessed fixture",
+          "MATCH" in g.stdout, g.stdout[-200:] + g.stderr[-200:])
+
     print(f"{len(results) - n_fail}/{len(results)} passed")
     sys.exit(1 if n_fail else 0)
 
