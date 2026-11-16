@@ -157,6 +157,33 @@ def main():
     check("replay after retraction is clean", 
           core.replay_rules()["notes-routing"]["status"] == "retracted")
 
+    # deviation instrument
+    core.RULES_FILE.unlink()
+    core.init()
+    core.PENDING_INJECT = None
+    core.BEHAVIOR_FILE.write_text("")
+    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+         mock.patch.object(core, "haystack_top", return_value=[]):
+        core.choose("where is the VPN note", cfg)
+        check("pending inject open, no deviation yet",
+              core.PENDING_INJECT is not None and not core.PENDING_INJECT["consumed"])
+        core.choose("where is the VPN note", cfg)
+    ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
+    check("unconsumed inject closed as deviation",
+          sum(1 for e in ev if e["kind"] == "deviation") == 1)
+    core.PENDING_INJECT = None
+    core.BEHAVIOR_FILE.write_text("")
+    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+         mock.patch.object(core, "haystack_top", return_value=[]):
+        core.choose("where is the VPN note", cfg)
+        core.observe_tool("skill_view", 5.0, "t9")
+        check("consumed marks pending", core.PENDING_INJECT["consumed"] is True)
+        core.choose("where is the VPN note", cfg)
+    ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
+    check("consumed inject not a deviation",
+          not any(e["kind"] == "deviation" for e in ev),
+          json.dumps([e["kind"] for e in ev]))
+
     # corrections ingest
     check("positive correction detected",
           core.note_correction("hey use notes-router for that") ==
@@ -175,17 +202,20 @@ def main():
     # observe_tool + consumption
     core.LAST_INJECT_TS = 0.0
     core.observe_tool("skill_view", 12.3, "t1")
-    core.observe_tool("terminal", 100.0, "t1", args={"command": "ls"})
+    core.observe_tool("terminal", 100.0, "t3", args={"command": "ls"})
     core.LAST_INJECT_TS = time.time()
     core.observe_tool("terminal", 50.0, "t2",
                       args={"command": "python3 ~/.hermes/scripts/haystack.py query x"})
     ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
-    tools = [e for e in ev if e["kind"] == "tool"]
-    check("tool log flags skill loads", tools[0]["skill"] is True and tools[1]["skill"] is False)
-    check("no consumed outside inject window", not any(e["kind"] == "consumed" for e in ev[:2]))
+    by_task = {e["task"]: e for e in ev if e["kind"] == "tool"}
+    check("tool log flags skill loads",
+          by_task["t1"]["skill"] is True and by_task["t3"]["skill"] is False)
+    check("no consumed outside inject window",
+          not by_task["t1"].get("consumed") and not by_task["t3"].get("consumed"))
     check("haystack use within window consumed",
           any(e["kind"] == "consumed" for e in ev)
-          and any(e.get("used") for e in tools))
+          and by_task["t2"].get("used") is True
+          and by_task["t2"].get("consumed") is True)
 
     n_fail = sum(1 for _, ok, _ in results if not ok)
     print(f"{len(results) - n_fail}/{len(results)} passed")

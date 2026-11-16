@@ -256,6 +256,24 @@ def haystack_top(text, url, k=3):
 
 LAST_INJECT_TS = 0.0
 CONSUME_WINDOW_S = 300.0
+PENDING_INJECT = None
+
+
+def close_pending_inject():
+    global PENDING_INJECT
+    if PENDING_INJECT and not PENDING_INJECT.get("consumed"):
+        log_event("deviation", rule=PENDING_INJECT["rule"],
+                  enforced=PENDING_INJECT.get("enforced", False),
+                  waited_s=round(time.time() - PENDING_INJECT["ts"]),
+                  mh=PENDING_INJECT["mh"])
+    PENDING_INJECT = None
+
+
+def open_pending_inject(rule_id, mh, enforced):
+    global PENDING_INJECT
+    close_pending_inject()
+    PENDING_INJECT = {"ts": time.time(), "rule": rule_id, "mh": mh,
+                      "enforced": enforced, "consumed": False}
 
 
 def log_event(kind, **fields):
@@ -305,6 +323,8 @@ def inject_for(rule, user_message, cfg, conf, dt):
     log_event("inject", rule=rule["id"], conf=round(conf, 3),
               ms=round(dt), chars=len(INJECT_TEMPLATE) + sum(len(p) for p in paths),
               paths=paths, mh=mhash(user_message))
+    open_pending_inject(rule["id"], mhash(user_message),
+                        rule.get("status") == "enforced")
     if rule.get("status") == "hint":
         enforce_if_ready(rule["id"], cfg.get("promote_n", 20))
     text = INJECT_TEMPLATE
@@ -323,6 +343,9 @@ def observe_tool(tool_name, duration_ms, task_id="", args=None):
         and args is not None and any(t in str(args) for t in ROUTE_TOOLS))
     consumed = used and (time.time() - LAST_INJECT_TS) <= CONSUME_WINDOW_S
     if consumed:
+        global PENDING_INJECT
+        if PENDING_INJECT and not PENDING_INJECT["consumed"]:
+            PENDING_INJECT["consumed"] = True
         log_event("consumed", tool=tool_name,
                   since_inject_s=round(time.time() - LAST_INJECT_TS),
                   task=task_id)
