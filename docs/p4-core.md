@@ -1,6 +1,6 @@
-# p3-core.md — the from-scratch core, as spoken (Diogo, 2026-11-13)
+# p4-core.md — the from-scratch core, as spoken (Diogo, 2026-11-13)
 
-Sketch of the P3 architecture in Diogo's own framing, recorded verbatim in
+Sketch of the P4 architecture in Diogo's own framing, recorded verbatim in
 structure, cleaned only for wording. Not implemented; this is the capture of
 the thinking, pre-autopsy (P2 still has to run).
 

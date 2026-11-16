@@ -84,7 +84,7 @@ build time:
 (b) pair every middleware rule with a shell pre_tool_call hook that fails
     closed — belt and suspenders, more complexity.
 Recommendation: (a) for P2 — crystallized ROUTING is an optimization, not a
-safety invariant; save fail-closed enforcement for the P3 architecture's
+safety invariant; save fail-closed enforcement for the P4 architecture'
 invariant blocks.
 
 ## 5. Mapping to the thesis (why this is a P2 experiment, not just a feature)

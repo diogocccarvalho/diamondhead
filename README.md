@@ -109,12 +109,22 @@ boundary (D8). See [docs/design.md](docs/design.md).
   learned corrections, and validators are the P2 building blocks. P2 lives
   here because its product is the observed behavior log: which tasks
   crystallized cleanly, which resisted, and why.
-- P3 — only after both P1 and P2 have run: autopsy haystack AND the P2
+- P3 — the query-formation pass, its own layer (Diogo, 2026-11-16): before
+  any callee (haystack retrieval, a d1 classifier, an LLM call), form the
+  input that maximizes that callee's MEASURED performance —
+  form(text, target, state) -> text. State (the task direction) supplies
+  intent; the pass supplies form. Reformatting is not intent resolution.
+  Consumed BY diamondhead AND haystack - a layer consumed by N callees
+  belongs to neither. The rewriter itself is a crystallized rewrite-operator
+  chain (genome per target; mutation random, selection strict), so it is
+  P3-shaped from birth. Prototype nursery: haystack's distro-cluster
+  nickname-query failure (measured first).
+- P4 — only after P1, P2 and P3 have run: autopsy haystack AND the P2
   agent-in-the-loop setup — collect failures and the good parts of each —
   and from that evidence develop the from-scratch architecture (no LLM at
   the core; concepts related deterministically, prediction as glue only).
-  The design rules in docs/design.md are the first input to P3. The core
-  shape as spoken by Diogo 2026-11-13: [docs/p3-core.md](docs/p3-core.md) —
+  The design rules in docs/design.md are the first input to P4. The core
+  shape as spoken by Diogo 2026-11-13: [docs/p4-core.md](docs/p4-core.md) —
   a chain of thought whose links are a semantic router that either injects
   context from memory or calls a proven crystallization block; context IS
   what the router injects; training becomes link-selection, not

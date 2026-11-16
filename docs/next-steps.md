@@ -1,6 +1,6 @@
 # next-steps.md — what can be implemented NOW in P2 (crystal-router)
 Researched 2026-11-13. Sources: design.md (D1-D8), implementation.md (mechanism map,
-verified against Hermes docs 2026-11-13), vault research/papers.md, p3-core.md.
+verified against Hermes docs 2026-11-13), vault research/papers.md, p4-core.md.
 No code here — each item is scoped enough to build directly.
 
 ## (a) Ranked components for the crystal-router plugin
@@ -78,7 +78,7 @@ No code here — each item is scoped enough to build directly.
 ## (b) Best practices from the papers, per component
 
 - Scale-free pinning / relative-not-absolute matching (haystack pin rule; the
-  hint p3-core.md adopts for the router's "grasp"): candidate-rule patterns
+  hint p4-core.md adopts for the router's "grasp"): candidate-rule patterns
   should match by relative similarity on the question family, not exact tokens
   or absolute thresholds. Keeps the router portable across phrasings and is
   the current best answer to "what is grasp without an encoder".
