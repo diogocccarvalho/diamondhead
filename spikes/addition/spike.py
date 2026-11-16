@@ -87,6 +87,16 @@ def run(fn, cases):
     return out, (time.perf_counter() - t0)
 
 
+def run_min(fn, cases, reps=3):
+    outputs = None
+    best = None
+    for _ in range(reps):
+        out, t = run(fn, cases)
+        outputs = out
+        best = t if best is None or t < best else best
+    return outputs, best
+
+
 PROBE_CASES = ((0, 0), (5, 0), (0, 7), (-5, 3), (5, -3), (-5, -3), (3, 10**6))
 
 
@@ -127,7 +137,7 @@ def main():
     if not DISTRIBUTION_FILE.exists():
         DISTRIBUTION_FILE.write_text(json.dumps({"n": len(cases), "seed": 20261116}))
 
-    base_out, base_t = run(naive_add, cases)
+    base_out, base_t = run_min(naive_add, cases)
 
     probes = {}
     for name, fn in MUTANTS.items():
@@ -138,7 +148,7 @@ def main():
                   f"on {probes[name]['input']}")
 
     for name, fn in MUTANTS.items():
-        out, t = run(fn, cases)
+        out, t = run_min(fn, cases)
         identical = out == base_out
         cheaper = t < base_t
         crash = probes[name]["crash"]
