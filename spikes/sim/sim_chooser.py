@@ -42,7 +42,7 @@ RULES = [
                  "notes)?"),
      "hint_words": ["research", "search", "find out", "look up", "compare",
                     "news"],
-     "yes_label": "needs web research", "min_conf": 0.75,
+     "yes_label": "needs web research", "min_conf": 0.55,
      "content": False},
 ]
 

@@ -288,7 +288,7 @@ CRYSTAL_SPECS = {
             "web_extract. Do not search one at a time."),
         "hint_words": ["research", "search", "find out", "look up", "compare", "news"],
         "yes_label": "needs web research",
-        "min_conf": 0.75,
+        "min_conf": 0.55,
         "content": False,
     },
 }
