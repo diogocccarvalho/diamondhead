@@ -23,6 +23,12 @@ FAMILY_ACTIONS = {
     ("web_search", "web_search"): ("research loop",
                                    "batch parallel searches, then extract pages"),
 }
+# sequence genome: the recorded order of the proven loop; fidelity between
+# the injected genome and the agent's observed tool order is measured
+FAMILY_GENOMES = {
+    ("patch", "terminal"): ["patch", "terminal"],
+    ("web_search", "web_search"): ["web_search", "web_extract"],
+}
 
 
 def mine():
@@ -53,6 +59,8 @@ def mine():
         for k in ("trigger", "inject", "hint_words", "content"):
             if k in spec:
                 rec[k] = spec[k]
+        if pair in FAMILY_GENOMES:
+            rec["genome"] = FAMILY_GENOMES[pair]
         core.append_rule(rec)
         core.log_event("crystal_candidate", rule=rid, pattern=rec["pattern"],
                        evidence_n=n)

@@ -278,6 +278,7 @@ CRYSTAL_SPECS = {
             "then run the test suite, then the loader gate, then commit. "
             "One loop, in that order, every time."),
         "hint_words": ["commit", "refactor", "test suite", "check.sh", "bug"],
+        "genome": ["patch", "terminal"],
         "content": False,
     },
     "research loop": {
@@ -292,6 +293,7 @@ CRYSTAL_SPECS = {
         "hint_words": ["research", "search", "find out", "look up", "compare", "news"],
         "yes_label": "needs web research",
         "min_conf": 0.55,
+        "genome": ["web_search", "web_extract"],
         "content": False,
     },
 }
@@ -300,7 +302,8 @@ CRYSTAL_SPECS = {
 def rule_fields(rule):
     spec = CRYSTAL_SPECS.get(rule.get("family"), {})
     out = dict(rule)
-    for k in ("trigger", "inject", "hint_words", "compass_words", "content"):
+    for k in ("trigger", "inject", "hint_words", "compass_words", "content",
+              "genome"):
         out.setdefault(k, spec.get(k, [] if k in ("hint_words", "compass_words")
                                    else ("" if k != "content" else False)))
     return out
@@ -380,6 +383,8 @@ PENDING_INJECT = None
 # crystal supersession: paths any crystal already provided this session.
 # A crystal re-providing context x is redundant - x is not needed again.
 SESSION_PATHS = {}
+# sequence fidelity: tools observed per task since its last injection
+TASK_SEQ = {}
 
 # task direction: the distilled main task kept in memory as a semantic
 # compass. Raw text is MEMORY-ONLY (privacy law); the log keeps hashes.
@@ -574,6 +579,9 @@ def inject_for(rule, user_message, cfg, conf, dt, history="", session_id=""):
               paths=paths, mh=mhash(user_message))
     open_pending_inject(rule["id"], mhash(user_message),
                         rule.get("status") == "enforced", user_message)
+    if rule.get("genome") and rule.get("status") in ("hint", "candidate"):
+        PENDING_INJECT["genome"] = list(rule["genome"])
+        PENDING_INJECT["task"] = None  # task id arrives with the first tool
     if rule.get("status") in ("hint", "candidate"):
         enforce_if_ready(rule["id"], cfg.get("promote_n", 20))
     text = template
@@ -586,7 +594,7 @@ ROUTE_TOOLS = ("haystack.py", "projects.py")
 SKILL_TOOLS = ("skill_view", "skills_list")
 
 
-def observe_tool(tool_name, duration_ms, task_id="", args=None):
+def observe_tool(tool_name, duration_ms=0, task_id="", args=None):
     used = tool_name in SKILL_TOOLS or (
         tool_name == "terminal"
         and args is not None and any(t in str(args) for t in ROUTE_TOOLS))
@@ -598,5 +606,26 @@ def observe_tool(tool_name, duration_ms, task_id="", args=None):
         log_event("consumed", tool=tool_name,
                   since_inject_s=round(time.time() - LAST_INJECT_TS),
                   task=task_id)
+    # sequence-crystal fidelity: tools since the injection, per task, checked
+    # against the crystal's genome (the recorded order of the proven loop)
+    if task_id:
+        p = PENDING_INJECT
+        if p and p.get("genome") and p.get("task") is None:
+            p["task"] = task_id  # bind the pending genome to its first tool
+        seq = TASK_SEQ.setdefault(task_id, [])
+        seq.append(tool_name)
+        if p and p.get("genome") and p.get("task") == task_id \
+                and not p.get("seq_done"):
+            genome = p["genome"]
+            if _is_subsequence(genome, seq) and len(seq) >= len(genome):
+                p["seq_done"] = True
+                log_event("sequence_match", rule=p["rule"], matched=True,
+                          genome=genome, observed=seq[-len(genome) - 2:],
+                          task=task_id)
     log_event("tool", tool=tool_name, ms=round(duration_ms or 0), task=task_id,
               skill=tool_name in SKILL_TOOLS, used=used, consumed=consumed)
+
+
+def _is_subsequence(needle, hay):
+    it = iter(hay)
+    return all(t in it for t in needle)

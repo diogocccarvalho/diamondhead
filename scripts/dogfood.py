@@ -83,6 +83,8 @@ def main():
         k = (e["kind"], e.get("rule"))
         if k[1]:
             rule_events[k] = rule_events.get(k, 0) + 1
+    seqs = [e for e in ev if e.get("kind") == "sequence_match"]
+    print(f"  sequence fidelity: {len(seqs)} genome-matched loops recorded")
     print("== dimensions per crystal ==")
     for r in rules:
         rid = r["id"]

@@ -137,6 +137,40 @@ def test_dimensions():
               and e["paths"] == ["a/vpn.md", "a/new.md"] for e in ev))
     core.SESSION_PATHS.clear()
 
+
+    # sequence fidelity: genome followed in order -> sequence_match logged
+    core.BEHAVIOR_FILE.write_text("")
+    core.PENDING_INJECT = None
+    core.SESSION_PATHS.clear()
+    core.TASK_SEQ.clear()
+    core.LAST_INJECT_TS = 0.0
+    with mock.patch.object(core, "classify_multi", return_value={
+            "notes-routing": (False, 0.4, "no", "d1-t"),
+            "auto-d0b974f8": (True, 0.90, "yes", "d1-t")}), \
+         mock.patch.object(core, "haystack_top", return_value=[]):
+        core.choose("refactor the router module", cfg, session_id="s2")
+        core.observe_tool("patch", 5.0, "task-x")
+        core.observe_tool("terminal", 5.0, "task-x")
+    ev = core.behavior_events()
+    check("sequence_match logged when genome followed in order",
+          any(e["kind"] == "sequence_match" and e["rule"] == "auto-d0b974f8"
+              and e["genome"] == ["patch", "terminal"] for e in ev))
+
+    # out-of-order tools -> no match
+    core.BEHAVIOR_FILE.write_text("")
+    core.PENDING_INJECT = None
+    core.TASK_SEQ.clear()
+    with mock.patch.object(core, "classify_multi", return_value={
+            "notes-routing": (False, 0.4, "no", "d1-t"),
+            "auto-d0b974f8": (True, 0.90, "yes", "d1-t")}), \
+         mock.patch.object(core, "haystack_top", return_value=[]):
+        core.choose("refactor the router module", cfg, session_id="s3")
+        core.observe_tool("terminal", 5.0, "task-y")
+    ev = core.behavior_events()
+    check("no sequence_match before the genome order completes",
+          not any(e["kind"] == "sequence_match" for e in ev))
+    core.TASK_SEQ.clear()
+
     # near_miss: yes choice below gate -> logged with conf + gate, no inject
     core.BEHAVIOR_FILE.write_text("")
     core.PENDING_INJECT = None
