@@ -339,14 +339,15 @@ def mhash(text):
     return hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()[:12]
 
 
-def choose(user_message, cfg):
+def choose(user_message, cfg, history=""):
     rules = live_rules(load_rules())
     if not rules or not plausibly_notes(user_message):
         return None, 0.0, 0.0
     rule = rules[0]
     if rule.get("status") == "enforced":
         log_event("enforced_fire", rule=rule["id"], mh=mhash(user_message))
-        return inject_for(rule, user_message, cfg, conf=1.0, dt=0.0)
+        return inject_for(rule, user_message, cfg, conf=1.0, dt=0.0,
+                          history=history)
     t0 = time.monotonic()
     try:
         hit, conf, model = classify(user_message, cfg["d1_url"], cfg["min_confidence"])
@@ -358,15 +359,22 @@ def choose(user_message, cfg):
         log_event("chooser_no", conf=round(conf, 3), ms=round(dt),
                   model=model[:60], mh=mhash(user_message))
         return None, conf, dt
-    return inject_for(rule, user_message, cfg, conf, dt)
+    return inject_for(rule, user_message, cfg, conf, dt, history=history)
 
 
-def inject_for(rule, user_message, cfg, conf, dt):
+def inject_for(rule, user_message, cfg, conf, dt, history=""):
     paths = []
     try:
         paths = haystack_top(user_message, cfg["haystack_url"])
     except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as e:
         log_event("haystack_error", err=str(e)[:120], mh=mhash(user_message))
+    # context-dedup: a crystal carrying context x makes re-providing x redundant
+    fresh = [p for p in paths if p[0] and p[0] not in history]
+    deduped = len(paths) - len(fresh)
+    if deduped:
+        log_event("context_dedup", rule=rule["id"], dropped=deduped,
+                  kept=len(fresh), mh=mhash(user_message))
+    paths = fresh
     bump_evidence(rule["id"])
     global LAST_INJECT_TS
     LAST_INJECT_TS = time.time()

@@ -30,7 +30,8 @@ def register(ctx):
         except Exception:
             pass
         try:
-            text, conf, ms = core.choose(user_message, cfg)
+            text, conf, ms = core.choose(user_message, cfg,
+                                         history=conversation_history or "")
         except Exception:
             core.log_event("chooser_crash", err=traceback.format_exc()[-200:])
             return None

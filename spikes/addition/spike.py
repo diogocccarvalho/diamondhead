@@ -149,15 +149,38 @@ def main():
             print(f"DOMAIN PROBE {name}: CRASH {probes[name]['crash']} "
                   f"on {probes[name]['input']}")
 
+    hot = [c for c in cases if c[0] < 64 and c[1] < 32]
+    cold = [c for c in cases if c not in hot]
+
     for name, fn in MUTANTS.items():
         out, t = run_min(fn, cases)
+        _, t_hot = run_min(fn, hot)
+        _, t_cold = run_min(fn, cold)
+        _, b_hot = run_min(naive_add, hot)
+        _, b_cold = run_min(naive_add, cold)
+        size = len(inspect.getsource(fn).encode())
+        weighted = 0.7 * t_hot + 0.3 * t_cold
+        weighted_base = 0.7 * b_hot + 0.3 * b_cold
         identical = out == base_out
-        cheaper = t < base_t
+        cheaper = weighted < weighted_base
+        usage_weighted = True
         crash = probes[name]["crash"]
         promoted = identical and cheaper and not crash
+        dream_judge = {
+            "hot_cheaper": t_hot < b_hot,
+            "cold_cheaper": t_cold < b_cold,
+            "hot_share": 0.7,
+            "weighted_faster": cheaper,
+            "size_bytes": size,
+            "size_per_hot_call": round(size / max(len(hot), 1), 2),
+            "footprint_note": (
+                "hot crystal: speed is what matters; cold crystal: only its "
+                "size matters, so a big cold crystal is a compaction target"),
+        }
         log({
             "kind": "verdict",
             "mutant": name,
+            "dream_judge": dream_judge,
             "code_sha": __import__("hashlib").sha256(
                 inspect.getsource(fn).encode()).hexdigest()[:12],
             "outputs_sha": __import__("hashlib").sha256(

@@ -222,6 +222,22 @@ def main():
     check("wrong context blocks promotion",
           not any(e["kind"] == "promote" for e in ev)
           and core.live_rules(core.load_rules())[0]["status"] == "hint")
+    # context-dedup: paths already in history are not re-injected
+    core.RULES_FILE.unlink()
+    core.init()
+    core.BEHAVIOR_FILE.write_text("")
+    core.PENDING_INJECT = None
+    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+         mock.patch.object(core, "haystack_top",
+                           return_value=[("a/dup.md", ""), ("a/fresh.md", "")]):
+        text, conf, ms = core.choose("where is the VPN note", cfg,
+                                     history="earlier context quoted a/dup.md here")
+    check("dedup drops path already in history",
+          "a/dup.md" not in (text or "") and "a/fresh.md" in (text or ""))
+    ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
+    check("context_dedup logged",
+          any(e["kind"] == "context_dedup" and e.get("dropped") == 1 for e in ev))
+
     # corrections ingest
     check("positive correction detected",
           core.note_correction("hey use notes-router for that") ==
