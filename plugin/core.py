@@ -102,7 +102,9 @@ def classify(text, url, min_conf):
                 "instructions": (
                     "Is this message a question about the user's personal notes, "
                     "vault, past sessions, projects, or stored information "
-                    "(something answered by searching their notes)? "
+                    "(something answered by searching their notes)? A question "
+                    "naming one of the user's projects, tools or repos by name "
+                    "(e.g. diamondhead, haystack, notes-router) counts as yes. "
                     "Text: " + text[:400]
                 ),
                 "type": "choice",
@@ -139,6 +141,10 @@ def haystack_top(text, url, k=3):
     return out
 
 
+LAST_INJECT_TS = 0.0
+CONSUME_WINDOW_S = 300.0
+
+
 def log_event(kind, **fields):
     rec = {"ts": time.time(), "kind": kind, **fields}
     try:
@@ -173,6 +179,8 @@ def choose(user_message, cfg):
     except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as e:
         log_event("haystack_error", err=str(e)[:120], mh=mhash(user_message))
     bump_evidence(rule["id"])
+    global LAST_INJECT_TS
+    LAST_INJECT_TS = time.time()
     log_event("inject", rule=rule["id"], conf=round(conf, 3),
               ms=round(dt), paths=paths, mh=mhash(user_message))
     text = INJECT_TEMPLATE
@@ -181,6 +189,18 @@ def choose(user_message, cfg):
     return text, conf, dt
 
 
-def observe_tool(tool_name, duration_ms, task_id=""):
+ROUTE_TOOLS = ("haystack.py", "projects.py")
+SKILL_TOOLS = ("skill_view", "skills_list")
+
+
+def observe_tool(tool_name, duration_ms, task_id="", args=None):
+    used = tool_name in SKILL_TOOLS or (
+        tool_name == "terminal"
+        and args is not None and any(t in str(args) for t in ROUTE_TOOLS))
+    consumed = used and (time.time() - LAST_INJECT_TS) <= CONSUME_WINDOW_S
+    if consumed:
+        log_event("consumed", tool=tool_name,
+                  since_inject_s=round(time.time() - LAST_INJECT_TS),
+                  task=task_id)
     log_event("tool", tool=tool_name, ms=round(duration_ms or 0), task=task_id,
-              skill=tool_name in ("skill_view", "skills_list"))
+              skill=tool_name in SKILL_TOOLS, used=used, consumed=consumed)

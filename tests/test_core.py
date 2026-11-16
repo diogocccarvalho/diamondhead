@@ -3,6 +3,7 @@ import io
 import json
 import sys
 import tempfile
+import time
 import urllib.error
 from pathlib import Path
 from unittest import mock
@@ -113,12 +114,20 @@ def main():
         text, conf, ms = core.choose("where is the VPN note", cfg)
     check("haystack-down still injects", text is not None and "notes-router" in text)
 
-    # observe_tool
+    # observe_tool + consumption
+    core.LAST_INJECT_TS = 0.0
     core.observe_tool("skill_view", 12.3, "t1")
-    core.observe_tool("terminal", 100.0, "t1")
+    core.observe_tool("terminal", 100.0, "t1", args={"command": "ls"})
+    core.LAST_INJECT_TS = time.time()
+    core.observe_tool("terminal", 50.0, "t2",
+                      args={"command": "python3 ~/.hermes/scripts/haystack.py query x"})
     ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
     tools = [e for e in ev if e["kind"] == "tool"]
     check("tool log flags skill loads", tools[0]["skill"] is True and tools[1]["skill"] is False)
+    check("no consumed outside inject window", not any(e["kind"] == "consumed" for e in ev[:2]))
+    check("haystack use within window consumed",
+          any(e["kind"] == "consumed" for e in ev)
+          and any(e.get("used") for e in tools))
 
     n_fail = sum(1 for _, ok, _ in results if not ok)
     print(f"{len(results) - n_fail}/{len(results)} passed")

@@ -48,7 +48,10 @@ def mut_chunk4(a, b):
 
 
 def mut_hot_lookup(a, b):
-    table = {i: naive_add(0, i) for i in range(16)}
+    table, r = {}, 0
+    for i in range(16):
+        table[i] = r
+        r += 1
     if b < 16:
         return a + table[b]
     r = a
@@ -91,14 +94,17 @@ def log(event):
 
 def replay_ledger():
     events = [json.loads(l) for l in LEDGER.read_text().splitlines() if l.strip()]
-    verdicts = [e for e in events if e["kind"] == "verdict"]
-    last = {}
-    for e in verdicts:
-        last[e["mutant"]] = e
+    latest = {}
+    for e in events:
+        if e["kind"] in ("verdict", "demote"):
+            latest[e["mutant"]] = e
     return {
         "events": len(events),
-        "promoted": sorted(m for m, e in last.items() if e["promoted"]),
-        "rejected": sorted(m for m, e in last.items() if e["status"] == "rejected"),
+        "demoted": sorted(m for m, e in latest.items() if e["kind"] == "demote"),
+        "promoted": sorted(m for m, e in latest.items()
+                           if e["kind"] == "verdict" and e["promoted"]),
+        "rejected": sorted(m for m, e in latest.items()
+                           if e["kind"] == "verdict" and e["status"] == "rejected"),
         "lossless": all(e.get("outputs_sha") for e in events if e["kind"] == "verdict"),
     }
 

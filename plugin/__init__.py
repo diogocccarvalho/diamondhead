@@ -36,7 +36,7 @@ def register(ctx):
     def post_tool_call(tool_name="", args=None, result="", task_id="",
                        duration_ms=0, **kwargs):
         try:
-            core.observe_tool(tool_name, duration_ms, task_id)
+            core.observe_tool(tool_name, duration_ms, task_id, args)
         except Exception:
             pass
 

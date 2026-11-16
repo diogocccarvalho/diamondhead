@@ -10,3 +10,13 @@
 {"identical": true, "kind": "verdict", "mutant": "double_add", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 4.35, "t_oracle_ms": 143.93}
 {"identical": true, "kind": "verdict", "mutant": "chunk4", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 87.04, "t_oracle_ms": 143.93}
 {"identical": true, "kind": "verdict", "mutant": "hot_lookup", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 46.76, "t_oracle_ms": 143.93}
+{"audit": "audit.py", "kind": "demote", "mutant": "hot_lookup", "reason": "provenance audit: oracle reference in table construction", "ts": 1794834642.9185176}
+{"identical": true, "kind": "verdict", "mutant": "double_add", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 4.35, "t_oracle_ms": 143.45}
+{"identical": true, "kind": "verdict", "mutant": "chunk4", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 86.98, "t_oracle_ms": 143.45}
+{"identical": true, "kind": "verdict", "mutant": "hot_lookup", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 22.05, "t_oracle_ms": 143.45}
+{"identical": true, "kind": "verdict", "mutant": "double_add", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 4.31, "t_oracle_ms": 143.45}
+{"identical": true, "kind": "verdict", "mutant": "chunk4", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 87.1, "t_oracle_ms": 143.45}
+{"identical": true, "kind": "verdict", "mutant": "hot_lookup", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 22.08, "t_oracle_ms": 143.45}
+{"identical": true, "kind": "verdict", "mutant": "double_add", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 4.29, "t_oracle_ms": 143.42}
+{"identical": true, "kind": "verdict", "mutant": "chunk4", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 87.02, "t_oracle_ms": 143.42}
+{"identical": true, "kind": "verdict", "mutant": "hot_lookup", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 22.01, "t_oracle_ms": 143.42}
