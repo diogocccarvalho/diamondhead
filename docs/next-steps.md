@@ -106,6 +106,22 @@ No code here — each item is scoped enough to build directly.
 
 ## (c) Risks / open questions
 
+- DEFERRED FROM ADVERSARIAL PASS 2026-11-16 (subagent audit, triaged — fixed same day:
+  sha256 hashes, SKIP_RE greeting+question tail, d1 model pinning in events, inject char
+  size, spike code_sha on verdicts). Deferred items, ranked:
+  1. Dreaming priority queue ("dream about your day") — no machinery; spike dreams all
+     mutants equally.
+  2. Contract versioning + promotion rollback (README 2026-11-14 contract note) — no
+     version field on rules; retracted is binary. code_sha on spike verdicts is the
+     spike-grade start.
+  3. Unseen-input stress / property checks beyond 7-case domain probe; no resource
+     limits (infinite-loop, blow-up) on mutants.
+  4. Optimization-pass 3-gate audit — spike implements identity + cost only; no
+     superoptimization/floor-signature surrogates; costs on synthetic not real workload.
+  5. INJECT_TEMPLATE is a hand-authored constant — contradicts "contracts crystallize";
+     stage-1 scaffolding, must become a crystallized artifact.
+  6. Deviation rate (model ignores injected route) is spec'd but not instrumented.
+
 - Fail-open enforcement (implementation.md §4): middleware/hooks are fail-open
   by Hermes design, colliding with D1/D2. Recommended resolution (a): accept
   fail-open for routing (worst case = status quo); reserve fail-closed shell
