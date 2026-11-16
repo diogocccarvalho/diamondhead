@@ -116,6 +116,47 @@ def main():
         text, conf, ms = core.choose("where is the VPN note", cfg)
     check("haystack-down still injects", text is not None and "notes-router" in text)
 
+    # promotion lifecycle (v0.2)
+    cfg2 = dict(cfg, promote_n=3)
+    core.BEHAVIOR_FILE.write_text("")
+    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+         mock.patch.object(core, "haystack_top", return_value=[]):
+        for _ in range(5):
+            core.choose("where is the VPN note", cfg2)
+    ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
+    check("no promote below age gate",
+          not any(e["kind"] == "promote" for e in ev))
+    rules_now = core.load_rules()
+    check("rule still hint before age/consume gates",
+          core.live_rules(rules_now)[0]["status"] == "hint")
+    # simulate age + consumed history -> promote
+    for i, e in enumerate(ev):
+        if e["kind"] == "inject":
+            cons = {"ts": e["ts"] + 10, "kind": "consumed",
+                    "tool": "skill_view", "task": f"c{i}"}
+            core.BEHAVIOR_FILE.open("a").write(json.dumps(cons) + "\n")
+    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+         mock.patch.object(core, "haystack_top", return_value=[]), \
+         mock.patch.object(core, "PROMOTE_MIN_AGE_S", 0), \
+         mock.patch.object(core, "PROMOTE_MIN_INJ", 3):
+        core.choose("where is the VPN note", cfg2)
+    ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
+    check("promote event fired", any(e["kind"] == "promote" for e in ev))
+    st = core.replay_rules()["notes-routing"]
+    check("replay shows enforced", st["status"] == "enforced")
+    with mock.patch.object(core, "haystack_top", return_value=[]):
+        text, conf, ms = core.choose("where is the VPN note", cfg2)
+    check("enforced rule bypasses classifier (0ms, no d1 call)",
+          text is not None and ms == 0.0)
+    ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
+    check("enforced_fire logged", any(e["kind"] == "enforced_fire" for e in ev))
+    # retraction supersedes enforcement
+    with open(core.RULES_FILE, "a") as f:
+        f.write(json.dumps({"id": "notes-routing", "status": "retracted"}) + "\n")
+    check("retraction kills enforced rule", not core.live_rules(core.load_rules()))
+    check("replay after retraction is clean", 
+          core.replay_rules()["notes-routing"]["status"] == "retracted")
+
     # corrections ingest
     check("positive correction detected",
           core.note_correction("hey use notes-router for that") ==

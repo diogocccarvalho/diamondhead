@@ -52,16 +52,101 @@ def live_rules(rules):
     dead, out = set(), []
     for r in rules:
         rid = r.get("id")
-        if r.get("status") == "retracted":
-            dead.add(rid)
-            out = [x for x in out if x.get("id") != rid]
+        if not rid or r.get("status") == "retracted":
+            if rid:
+                dead.add(rid)
+                out = [x for x in out if x.get("id") != rid]
             continue
         if rid in dead or r.get("status") == "candidate":
             continue
-        if any(x.get("id") == rid for x in out):
-            continue
-        out.append(r)
+        cur = next((x for x in out if x.get("id") == rid), None)
+        if cur is None:
+            out.append(dict(r))
+        elif r.get("status") == "enforced":
+            cur["status"] = "enforced"
     return out
+
+
+PROMOTE_MIN_CONSUMED = 0.8
+PROMOTE_MIN_AGE_S = 7 * 86400
+PROMOTE_MIN_INJ = 5
+
+
+def rule_first_seen(rule_id):
+    if RULES_FILE.exists():
+        first = None
+        for line in RULES_FILE.read_text().splitlines():
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if r.get("id") == rule_id:
+                first = r if first is None else min(first, r, key=lambda x: x.get("ts", 0))
+        if first is not None:
+            return first.get("ts", 0)
+    return 0
+
+
+def consumed_ratio(rule_id):
+    inj = [e for e in behavior_events() if e.get("kind") == "inject"
+           and e.get("rule") == rule_id]
+    if not inj:
+        return 0.0, 0
+    inj_ts = {e["ts"] for e in inj}
+    cons = [e for e in behavior_events() if e.get("kind") == "consumed"
+            and any(0 <= e["ts"] - t <= CONSUME_WINDOW_S for t in inj_ts)]
+    return len(cons) / len(inj), len(inj)
+
+
+def behavior_events():
+    try:
+        return [json.loads(l) for l in BEHAVIOR_FILE.read_text().splitlines()
+                if l.strip()]
+    except OSError:
+        return []
+
+
+def enforce_if_ready(rule_id, promote_n):
+    n = rule_evidence(rule_id)
+    ratio, inj = consumed_ratio(rule_id)
+    age = time.time() - rule_first_seen(rule_id)
+    if n >= promote_n and inj >= PROMOTE_MIN_INJ and ratio >= PROMOTE_MIN_CONSUMED \
+            and age >= PROMOTE_MIN_AGE_S:
+        append_rule({"id": rule_id, "status": "enforced", "ts": time.time(),
+                     "evidence_n": n, "consumed_ratio": round(ratio, 3),
+                     "injections": inj})
+        log_event("promote", rule=rule_id, evidence_n=n,
+                  consumed_ratio=round(ratio, 3), injections=inj)
+        return True
+    return False
+
+
+def append_rule(rec):
+    with open(RULES_FILE, "a") as f:
+        f.write(json.dumps(rec) + "\n")
+
+
+def replay_rules():
+    state = {}
+    for line in RULES_FILE.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            r = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        rid = r.get("id")
+        if not rid:
+            continue
+        if r.get("status") == "evidence":
+            st = state.setdefault(rid, {"evidence_n": 0, "status": "hint"})
+            st["evidence_n"] += r.get("n", 1)
+        elif r.get("status") == "retracted":
+            state[rid] = {"status": "retracted", "evidence_n": 0}
+        else:
+            cur = state.setdefault(rid, {"evidence_n": 0})
+            cur["status"] = r.get("status", cur.get("status", "hint"))
+    return state
 
 
 def bump_evidence(rule_id, n=1):
@@ -185,6 +270,10 @@ def choose(user_message, cfg):
     rules = live_rules(load_rules())
     if not rules or not plausibly_notes(user_message):
         return None, 0.0, 0.0
+    rule = rules[0]
+    if rule.get("status") == "enforced":
+        log_event("enforced_fire", rule=rule["id"], mh=mhash(user_message))
+        return inject_for(rule, user_message, cfg, conf=1.0, dt=0.0)
     t0 = time.monotonic()
     try:
         hit, conf, model = classify(user_message, cfg["d1_url"], cfg["min_confidence"])
@@ -192,11 +281,14 @@ def choose(user_message, cfg):
         log_event("chooser_error", err=str(e)[:120], mh=mhash(user_message))
         return None, 0.0, (time.monotonic() - t0) * 1000
     dt = (time.monotonic() - t0) * 1000
-    rule = rules[0]
     if not hit:
         log_event("chooser_no", conf=round(conf, 3), ms=round(dt),
                   model=model[:60], mh=mhash(user_message))
         return None, conf, dt
+    return inject_for(rule, user_message, cfg, conf, dt)
+
+
+def inject_for(rule, user_message, cfg, conf, dt):
     paths = []
     try:
         paths = haystack_top(user_message, cfg["haystack_url"])
@@ -208,6 +300,8 @@ def choose(user_message, cfg):
     log_event("inject", rule=rule["id"], conf=round(conf, 3),
               ms=round(dt), chars=len(INJECT_TEMPLATE) + sum(len(p) for p in paths),
               paths=paths, mh=mhash(user_message))
+    if rule.get("status") == "hint":
+        enforce_if_ready(rule["id"], cfg.get("promote_n", 20))
     text = INJECT_TEMPLATE
     if paths:
         text += "\nTop matching notes:\n" + "\n".join(f"- {p}" for p in paths)
