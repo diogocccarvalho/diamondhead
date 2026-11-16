@@ -34,7 +34,7 @@ No code here — each item is scoped enough to build directly.
    traffic incl. Telegram. Gate: 100% skill load on notes questions, <1% FP.
 
 3. **Candidate rule store (learn) — append-only rules in plugin_db().**
-   Does: patterns from the log (e.g. "corrections mention Jira after deploy
+   Does: patterns from the log (e.g. a correction follows a deploy question
    questions") become candidate `when X → do Y` rules, appended with evidence
    counts; retraction records supersede; store is replayable to rebuild
    everything derived (classifiers, caches).
@@ -138,7 +138,7 @@ No code here — each item is scoped enough to build directly.
   question families, or wait longer for the single class? (Lean to pooled
   evidence, per-class enforcement.)
 - Multi-class generalization: success on notes-routing doesn't prove the loop
-  generalizes (candidate #2: a second family, e.g. EAI/Jira deploy routing).
+  generalizes (candidate #2: a second family, e.g. service-deploy routing).
   Plan the second class as the real test of D6 granularity.
 - Novelty re-check: search again for published "online crystallization of
   verified sub-procedures" before claiming anything (last checked 2026-11-06).

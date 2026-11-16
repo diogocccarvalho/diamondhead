@@ -1,2 +1,4 @@
-*.sqlite
 __pycache__/
+*.pyc
+spikes/sim/sim_verdicts.jsonl
+.DS_Store

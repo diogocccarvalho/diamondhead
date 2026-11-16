@@ -166,6 +166,38 @@ as dominance on that distribution, never in the abstract.
 - [ ] Search for any published "online crystallization of verified sub-procedures"
       work again before claiming novelty (checked 2026-11-06: not found)
 
+## Prior art & credits
+
+DiamondHead is built on the shoulders of a lot of recent work. The closest
+lines of research, and what we take from each (full survey with deltas:
+[research/prior-art-p2-plugin.md](research/prior-art-p2-plugin.md)):
+
+- **Voyager** (2023) — the existence proof: environment-verified skills stored
+  as executable code. Our delta: promotion to deterministic auto-fire.
+- **SCBT — Self-Crystallizing Behavior Trees** (Oct 2026,
+  [arXiv:2610.25455](https://arxiv.org/abs/2610.25455)) — the same word and the
+  "compiler not runtime" idea; they compile on FAILURE via call-rate decay, we
+  compile on SUCCESS via verified-use evidence.
+- **Zep Agent Skills** (Nov 2026,
+  [arXiv:2611.01386](https://arxiv.org/abs/2611.01386)) — capture→compile→
+  curate→admit pipeline with gated admission; batch/scheduled, selection stays
+  search-based. Our delta: live-traffic promotion of a procedure past scoring.
+- **RSPM** ([arXiv:2610.25561](https://arxiv.org/abs/2610.25561)),
+  **WikiSkill** ([arXiv:2608.27454](https://arxiv.org/abs/2608.27454)),
+  **AutoSkill/SkillEvo** — offline confidence-gated promotion variants.
+- **Gödel Machine** (Schmidhuber), **Darwin Gödel Machine**,
+  **AlphaEvolve** — self-modification anchored to external verifiers.
+- **Massalin's Synthesis superoptimizer** — dreaming: exhaustive offline
+  mutation of tiny proven kernels; the oracle disposes.
+- **Hippocampal replay / sleep consolidation** — the two-clock design
+  (serving frozen, dreaming offline).
+- **Haystack** ([github.com/diogocccarvalho/haystack](https://github.com/diogocccarvalho/haystack))
+  — the companion project: indexes WHAT WE KNOW; DiamondHead indexes WHAT WE
+  DO. The chooser is the join.
+
+Claims to novelty are stated narrowly in the prior-art survey and re-verified
+against late-2026 literature; corrections welcome.
+
 ## License
 
 MIT

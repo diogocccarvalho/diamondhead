@@ -27,7 +27,7 @@ QUERIES = [
     ("yes", "what did we decide about the haystack storage dreams?"),
     ("yes", "search my notes for the guitar practice plan"),
     ("yes", "what's left on the diamondhead backlog?"),
-    ("yes", "find the note about the EAI session id for test"),
+    ("yes", "find the note about the vpn config details"),
     ("yes", "which note has the distro speed research?"),
     ("yes", "remind me what the P2 concept was"),
     ("yes", "pull up my work schedule note"),
@@ -46,7 +46,7 @@ QUERIES = [
     ("no", "how do I reset my bluetooth headphones"),
     ("no", "what time is the meeting today"),
     ("no", "run the tests on the street fighter repo"),
-    ("no", "deploy the sql to moscovo04 please"),
+    ("no", "deploy the sql to the staging db please"),
     ("no", "hey"),
     ("no", "ok thanks mate that's all"),
 ]
