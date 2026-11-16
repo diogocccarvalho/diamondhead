@@ -70,12 +70,12 @@ def main():
 
     # chooser: classifier no
     cfg = {"d1_url": "http://x", "haystack_url": "http://y", "min_confidence": 0.85}
-    with mock.patch.object(core, "classify", return_value=(False, 0.4, "")):
+    with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (False, 0.4, "no", "")}):
         text, conf, ms = core.choose("what did I do Friday", cfg)
     check("classifier-no returns None", text is None)
 
     # chooser: hit with haystack paths
-    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-test")), \
+    with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-test")}), \
          mock.patch.object(core, "haystack_top", return_value=["notes/vpn.md"]):
         text, conf, ms = core.choose("where is the VPN note", cfg)
     check("hit returns injection", text is not None and "notes-router" in text)
@@ -86,7 +86,7 @@ def main():
           and not any("VPN note" in json.dumps(e) for e in ev))
 
     # chooser: service down degrades to None
-    with mock.patch.object(core, "classify",
+    with mock.patch.object(core, "classify_multi",
                            side_effect=urllib.error.URLError("down")):
         text, conf, ms = core.choose("where is the VPN note", cfg)
     check("classifier-down fail-open None", text is None)
@@ -110,7 +110,7 @@ def main():
         check("haystack list response parsed", core.haystack_top("q", "http://y") == ["a/b.md"])
 
     # haystack down still injects route
-    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-test")), \
+    with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-test")}), \
          mock.patch.object(core, "haystack_top",
                            side_effect=urllib.error.URLError("down")):
         text, conf, ms = core.choose("where is the VPN note", cfg)
@@ -119,7 +119,7 @@ def main():
     # promotion lifecycle (v0.2)
     cfg2 = dict(cfg, promote_n=3)
     core.BEHAVIOR_FILE.write_text("")
-    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+    with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-t")}), \
          mock.patch.object(core, "haystack_top", return_value=[]):
         for _ in range(5):
             core.choose("where is the VPN note", cfg2)
@@ -135,7 +135,7 @@ def main():
             cons = {"ts": e["ts"] + 10, "kind": "consumed",
                     "tool": "skill_view", "task": f"c{i}"}
             core.BEHAVIOR_FILE.open("a").write(json.dumps(cons) + "\n")
-    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+    with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-t")}), \
          mock.patch.object(core, "haystack_top", return_value=[]), \
          mock.patch.object(core, "PROMOTE_MIN_AGE_S", 0), \
          mock.patch.object(core, "PROMOTE_MIN_INJ", 3), \
@@ -167,7 +167,7 @@ def main():
     core.init()
     core.PENDING_INJECT = None
     core.BEHAVIOR_FILE.write_text("")
-    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+    with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-t")}), \
          mock.patch.object(core, "haystack_top", return_value=[]):
         core.choose("where is the VPN note", cfg)
         check("pending inject open, no deviation yet",
@@ -178,7 +178,7 @@ def main():
           sum(1 for e in ev if e["kind"] == "deviation") == 1)
     core.PENDING_INJECT = None
     core.BEHAVIOR_FILE.write_text("")
-    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+    with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-t")}), \
          mock.patch.object(core, "haystack_top", return_value=[]):
         core.choose("where is the VPN note", cfg)
         core.observe_tool("skill_view", 5.0, "t9")
@@ -194,7 +194,7 @@ def main():
     core.init()
     core.PENDING_INJECT = None
     core.BEHAVIOR_FILE.write_text("")
-    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+    with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-t")}), \
          mock.patch.object(core, "haystack_top", return_value=[]), \
          mock.patch.object(core, "judge_context", return_value=(True, 0.9, "d1-t")):
         core.choose("where is the VPN note", cfg)
@@ -209,7 +209,7 @@ def main():
     core.RULES_FILE.unlink()
     core.init()
     for _ in range(6):
-        with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+        with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-t")}), \
              mock.patch.object(core, "haystack_top", return_value=[]), \
              mock.patch.object(core, "judge_context", return_value=(False, 0.9, "d1-t")), \
              mock.patch.object(core, "PROMOTE_MIN_AGE_S", 0):
@@ -227,9 +227,9 @@ def main():
     core.init()
     core.BEHAVIOR_FILE.write_text("")
     core.PENDING_INJECT = None
-    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+    with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-t")}), \
          mock.patch.object(core, "haystack_top",
-                           return_value=[("a/dup.md", ""), ("a/fresh.md", "")]):
+                           return_value=["a/dup.md", "a/fresh.md"]):
         text, conf, ms = core.choose("where is the VPN note", cfg,
                                      history="earlier context quoted a/dup.md here")
     check("dedup drops path already in history",

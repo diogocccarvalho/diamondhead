@@ -9,6 +9,6 @@ tags: [router, memory, crystallization]
 config_schema:
   d1_url: {type: str, default: "http://127.0.0.1:8080/v1/systemone", description: "d1 decision-model endpoint"}
   haystack_url: {type: str, default: "http://127.0.0.1:8083/query", description: "haystack HTTP API query endpoint"}
-  min_confidence: {type: float, default: 0.85, description: "classifier confidence gate for injection"}
+  min_confidence: {type: float, default: 0.80, description: "classifier confidence gate for injection"}
   inject_enabled: {type: bool, default: true, description: "master switch for pre-LLM injection"}
   promote_n: {type: int, default: 20, description: "validated fires needed before a hint rule may be enforced"}

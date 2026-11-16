@@ -45,10 +45,14 @@ def mine():
             ("->".join(pair) + "|" + family).encode()).hexdigest()[:8]
         if any(r.get("id") == rid for r in core.load_rules()):
             continue
+        spec = core.CRYSTAL_SPECS.get(family, {})
         rec = {"id": rid, "family": family, "action": action,
                "status": "candidate", "evidence_n": n,
                "source": "mined", "pattern": "->".join(pair),
                "ts": time.time()}
+        for k in ("trigger", "inject", "hint_words", "content"):
+            if k in spec:
+                rec[k] = spec[k]
         core.append_rule(rec)
         core.log_event("crystal_candidate", rule=rid, pattern=rec["pattern"],
                        evidence_n=n)

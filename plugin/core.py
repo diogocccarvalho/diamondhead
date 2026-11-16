@@ -4,6 +4,7 @@ import re
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from plugins.plugin_storage import plugin_data_dir
@@ -58,7 +59,7 @@ def live_rules(rules):
                 dead.add(rid)
                 out = [x for x in out if x.get("id") != rid]
             continue
-        if rid in dead or r.get("status") == "candidate":
+        if rid in dead:
             continue
         cur = next((x for x in out if x.get("id") == rid), None)
         if cur is None:
@@ -244,10 +245,96 @@ def classify(text, url, min_conf):
     with urllib.request.urlopen(req, timeout=D1_TIMEOUT) as r:
         payload = json.loads(r.read())
     ans = payload["answers"]["q"]
-    choice = ans.get("choice")
+    choice = str(ans.get("choice", "")).strip().lower()
     conf = float(ans.get("confidence", 0.0))
     model = payload.get("model") or ans.get("model") or ""
     return choice == "yes" and conf >= min_conf, conf, model
+
+
+# per-family crystal spec: the d1 trigger question, the injected procedure,
+# the O(1) hint pre-gate words and whether the crystal carries haystack content
+CRYSTAL_SPECS = {
+    "notes/vault question": {
+        "trigger": (
+            "Is this message a question about the user's personal notes, "
+            "vault, past sessions, projects, or stored information "
+            "(something answered by searching their notes)? A question "
+            "naming one of the user's projects, tools or repos by name "
+            "(e.g. diamondhead, haystack, notes-router) counts as yes."),
+        "inject": INJECT_TEMPLATE,
+        "hint_words": [],
+        "content": True,
+    },
+    "code-change loop": {
+        "trigger": (
+            "Is this message about editing, fixing, debugging or refactoring "
+            "the user's own code, so the agent should follow an edit-then-"
+            "test-then-commit loop?"),
+        "inject": (
+            "[diamondhead route] Code-change loop crystal: make the edit, "
+            "then run the test suite, then the loader gate, then commit. "
+            "One loop, in that order, every time."),
+        "hint_words": ["commit", "refactor", "test suite", "check.sh", "bug"],
+        "content": False,
+    },
+    "research loop": {
+        "trigger": (
+            "Is this message a request to search the internet for "
+            "information or news (rather than searching the user's own "
+            "notes)?"),
+        "inject": (
+            "[diamondhead route] Research-loop crystal: batch parallel web "
+            "searches first, then extract the promising pages with "
+            "web_extract. Do not search one at a time."),
+        "hint_words": ["research", "search", "find out", "look up", "compare", "news"],
+        "yes_label": "needs web research",
+        "min_conf": 0.75,
+        "content": False,
+    },
+}
+
+
+def rule_fields(rule):
+    spec = CRYSTAL_SPECS.get(rule.get("family"), {})
+    out = dict(rule)
+    for k in ("trigger", "inject", "hint_words", "content"):
+        out.setdefault(k, spec.get(k, [] if k == "hint_words" else ("" if k != "content" else False)))
+    return out
+
+
+def _classify_one(text, rule, url, min_conf):
+    min_conf = rule.get("min_conf") or min_conf
+    body = {
+        "state": "diamondhead routing",
+        "questions": {"q": {
+            "instructions": rule["trigger"] + " Text: " + text[:400],
+            "type": "choice",
+            "criteria": {"yes": rule.get("yes_label") or rule.get("family", "match"),
+                         "no": "not this"},
+        }},
+    }
+    req = urllib.request.Request(
+        url, data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=D1_TIMEOUT) as r:
+        payload = json.loads(r.read())
+    ans = payload["answers"]["q"]
+    choice = str(ans.get("choice", "")).strip().lower()
+    conf = float(ans.get("confidence", 0.0))
+    model = payload.get("model") or ans.get("model") or ""
+    return choice == "yes" and conf >= min_conf, conf, choice, model
+
+
+def classify_multi(text, rules, url, min_conf):
+    # one single-question call per crystal, concurrent: multi-question calls
+    # measured uncalibrated (yes-conf collapses); parallel keeps latency flat
+    out = {}
+    with ThreadPoolExecutor(max_workers=len(rules)) as ex:
+        futs = {r["id"]: ex.submit(_classify_one, text, r, url, min_conf)
+                for r in rules}
+        for rid, fut in futs.items():
+            out[rid] = fut.result()
+    return out
 
 
 def haystack_top(text, url, k=3):
@@ -343,49 +430,70 @@ def choose(user_message, cfg, history=""):
     rules = live_rules(load_rules())
     if not rules or not plausibly_notes(user_message):
         return None, 0.0, 0.0
-    rule = rules[0]
-    if rule.get("status") == "enforced":
+    rules = [rule_fields(r) for r in rules]
+    cand, skipped = [], []
+    for r in rules:
+        words = r.get("hint_words") or []
+        if words and not any(w in user_message.lower() for w in words):
+            skipped.append(r["id"])
+        else:
+            cand.append(r)
+    if skipped:
+        log_event("chooser_skip", rules=skipped, mh=mhash(user_message))
+    if not cand:
+        return None, 0.0, 0.0
+    enforced = [r for r in cand if r.get("status") == "enforced"]
+    if enforced:
+        rule = enforced[0]
         log_event("enforced_fire", rule=rule["id"], mh=mhash(user_message))
         return inject_for(rule, user_message, cfg, conf=1.0, dt=0.0,
                           history=history)
     t0 = time.monotonic()
     try:
-        hit, conf, model = classify(user_message, cfg["d1_url"], cfg["min_confidence"])
+        results = classify_multi(user_message, cand, cfg["d1_url"],
+                                 cfg["min_confidence"])
     except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as e:
         log_event("chooser_error", err=str(e)[:120], mh=mhash(user_message))
         return None, 0.0, (time.monotonic() - t0) * 1000
     dt = (time.monotonic() - t0) * 1000
-    if not hit:
-        log_event("chooser_no", conf=round(conf, 3), ms=round(dt),
-                  model=model[:60], mh=mhash(user_message))
-        return None, conf, dt
+    hits = [(r, results[r["id"]]) for r in cand if results[r["id"]][0]]
+    if not hits:
+        log_event("chooser_no",
+                  confs={r["id"]: round(results[r["id"]][1], 3) for r in cand},
+                  choices={r["id"]: results[r["id"]][2] for r in cand},
+                  ms=round(dt), mh=mhash(user_message))
+        return None, 0.0, dt
+    rule, (hit, conf, choice, model) = max(hits, key=lambda x: x[1][1])
     return inject_for(rule, user_message, cfg, conf, dt, history=history)
 
 
 def inject_for(rule, user_message, cfg, conf, dt, history=""):
     paths = []
-    try:
-        paths = haystack_top(user_message, cfg["haystack_url"])
-    except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as e:
-        log_event("haystack_error", err=str(e)[:120], mh=mhash(user_message))
-    # context-dedup: a crystal carrying context x makes re-providing x redundant
-    fresh = [p for p in paths if p[0] and p[0] not in history]
-    deduped = len(paths) - len(fresh)
-    if deduped:
-        log_event("context_dedup", rule=rule["id"], dropped=deduped,
-                  kept=len(fresh), mh=mhash(user_message))
-    paths = fresh
+    if rule.get("content"):
+        try:
+            paths = haystack_top(user_message, cfg["haystack_url"])
+        except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as e:
+            log_event("haystack_error", err=str(e)[:120], mh=mhash(user_message))
+        paths = [str(p) for p in paths]
+        # context-dedup: a crystal carrying context x makes re-providing x redundant
+        fresh = [p for p in paths if p and p not in history]
+        deduped = len(paths) - len(fresh)
+        if deduped:
+            log_event("context_dedup", rule=rule["id"], dropped=deduped,
+                      kept=len(fresh), mh=mhash(user_message))
+        paths = fresh
     bump_evidence(rule["id"])
     global LAST_INJECT_TS
     LAST_INJECT_TS = time.time()
+    template = rule.get("inject") or INJECT_TEMPLATE
     log_event("inject", rule=rule["id"], conf=round(conf, 3),
-              ms=round(dt), chars=len(INJECT_TEMPLATE) + sum(len(p) for p in paths),
+              ms=round(dt), chars=len(template) + sum(len(p) for p in paths),
               paths=paths, mh=mhash(user_message))
     open_pending_inject(rule["id"], mhash(user_message),
                         rule.get("status") == "enforced", user_message)
-    if rule.get("status") == "hint":
+    if rule.get("status") in ("hint", "candidate"):
         enforce_if_ready(rule["id"], cfg.get("promote_n", 20))
-    text = INJECT_TEMPLATE
+    text = template
     if paths:
         text += "\nTop matching notes:\n" + "\n".join(f"- {p}" for p in paths)
     return text, conf, dt

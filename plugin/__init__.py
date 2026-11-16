@@ -13,7 +13,7 @@ def register(ctx):
     cfg = {
         "d1_url": ctx.get_config("d1_url") or "http://127.0.0.1:8080/v1/systemone",
         "haystack_url": ctx.get_config("haystack_url") or "http://127.0.0.1:8083/query",
-        "min_confidence": float(ctx.get_config("min_confidence") or 0.85),
+        "min_confidence": float(ctx.get_config("min_confidence") or 0.80),
         "inject_enabled": ctx.get_config("inject_enabled") is not False,
         "promote_n": int(ctx.get_config("promote_n") or 20),
     }
