@@ -163,3 +163,19 @@ any LLM), form the input that maximizes that callee's measured performance.
 - P2 prototype (buildable now): rewrite-operator genome swept against the
   haystack evals with the hard-pairs held-out gate (A1 discipline). First
   measured numbers would be the pass's proof of concept.
+
+## Decisions recorded (2026-11-16, Diogo):
+- A3 control split: SKIPPED by decision. Rationale: Diogo is the production
+  user; opensource makes the community the extended eval - issues found by
+  others get fixed for everybody. No off-day degradation run.
+- Negative domain (A5): APPROVED as research - does extending the
+  correctness gate to negatives change which champion survives (and at what
+  speed cost)? Domain choice is a fitness knob; quantify it.
+- Query-formation pass: RE-SCOPED from standalone P3 project to a
+  diamondhead component. It is the chooser's sibling: chooser selects WHICH
+  crystal fires, the formation pass decides WHAT THE CALL SAYS - a pre-call
+  layer, plugin-shaped by definition. P2 prototype targets the distro-
+  cluster nickname-query failure from A1 (real bug, real eval).
+- Finish-everything wave dispatched: B3 looping primitives (spike),
+  distro-cluster breakdown + rewrite-op prototype (haystack), C-sweeps
+  (haystack) - new projects wait until these land.
