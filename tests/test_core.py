@@ -36,6 +36,38 @@ def fake_urlopen(payload, fail=False):
     return mock.MagicMock(return_value=R())
 
 
+def test_dream():
+    sys.path.insert(0, str(Path(core.__file__).parent.parent / "scripts"))
+    import dream  # noqa: F401
+    # refusal: young family dreams nothing
+    core.init()
+    core.BEHAVIOR_FILE.write_text("")
+    m, why = dream.dream()
+    check("young family refuses to dream", m is None and "young" in why)
+
+    # usage priority + direction + mutant appended beside parent
+    for i in range(4):
+        core.log_event("inject", rule="notes-routing", conf=0.9)
+    for i in range(2):
+        core.log_event("near_miss", rule="notes-routing", conf=0.7, gate=0.8)
+    m, why = dream.dream()
+    check("hottest family dreams", m is not None and m["parent"] == "notes-routing")
+    check("direction from failure profile",
+          m is not None and m["direction"] in ("paraphrase", "sharpen"))
+    rules = {r["id"]: r for r in core.load_rules()}
+    check("mutant beside parent in live store", m["id"] in rules)
+    check("mutant is a candidate (never auto-fires enforced)",
+          rules[m["id"]]["status"] == "candidate")
+    check("mutant carries parent + variant",
+          rules[m["id"]].get("parent") == "notes-routing"
+          and rules[m["id"]].get("variant") == 0)
+    # variant advances on re-run, no duplicate
+    m2, _ = dream.dream()
+    check("next dream advances variant",
+          m2 is None or m2.get("variant", 0) > 0 or m2["id"] != m["id"])
+    check("dream ledger line appended", dream.LEDGER.exists())
+
+
 def test_dimensions():
     cfg = {"d1_url": "http://x", "haystack_url": "http://y",
            "min_confidence": 0.80, "promote_n": 20}
@@ -308,6 +340,7 @@ def main():
 
     n_fail = sum(1 for _, ok, _ in results if not ok)
     test_dimensions()
+    test_dream()
     print(f"{len(results) - n_fail}/{len(results)} passed")
     sys.exit(1 if n_fail else 0)
 
