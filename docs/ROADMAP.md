@@ -176,6 +176,14 @@ any LLM), form the input that maximizes that callee's measured performance.
   crystal fires, the formation pass decides WHAT THE CALL SAYS - a pre-call
   layer, plugin-shaped by definition. P2 prototype targets the distro-
   cluster nickname-query failure from A1 (real bug, real eval).
+  CORRECTED (same day, Diogo): it is its OWN layer, consumed BY diamondhead
+  AND haystack - a layer consumed by N callees belongs to neither. Shape:
+  form(text, target, state) -> text; target = callee (retrieval vs
+  classifier vs LLM), each callee has its own fitness; genome = rewrite-op
+  chain per target. Today's prototype lives in haystack
+  (scripts/query_formation.py, the distro-cluster nursery); graduates to
+  its own component once it has numbers. P3: its own pass between intent
+  (state) and the call.
 - Finish-everything wave dispatched: B3 looping primitives (spike),
   distro-cluster breakdown + rewrite-op prototype (haystack), C-sweeps
   (haystack) - new projects wait until these land.
