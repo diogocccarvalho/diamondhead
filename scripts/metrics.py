@@ -44,6 +44,14 @@ def main():
     eval_ms = [e["ms"] for e in evals if e.get("ms")]
     skip_ms = [e["ms"] for e in turns if e.get("ms") == 0]
 
+    # rot curve: context the crystals did NOT add. Dedup dropped = paths
+    # already in conversation history; superseded = paths a crystal already
+    # provided this session. Naive baseline = re-injecting everything.
+    sup = [e for e in ev if e.get("kind") == "superseded"]
+    dedup = [e for e in ev if e.get("kind") == "context_dedup"]
+    rot_saved = len(sup) * 60 + len(dedup) * 60  # ~1 path line = ~60 tok
+    naive_reinject = sum(inj_tokens) + rot_saved
+
     closed = len(cons) + len(dev)
     consumed_rate = len(cons) / closed if closed else 0.0
     judged_correct = (sum(1 for e in judges if e.get("correct")) / len(judges)
@@ -72,6 +80,11 @@ def main():
          "SIMULATED"),
         ("net tokens (simulated savings - injected)", net,
          "SIMULATED: consumed injections x naive cost"),
+        ("rot: re-injections dropped (dedup + superseded)",
+         f"{len(dedup)} + {len(sup)}", "measured"),
+        ("rot: tokens NOT re-added (est)", rot_saved, "measured (~60/path)"),
+        ("rot: naive reinject vs actual",
+         f"{naive_reinject} vs {sum(inj_tokens)}", "measured+est"),
     ]
     print("| metric | value | source |")
     print("|---|---|---|")

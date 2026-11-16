@@ -377,6 +377,10 @@ LAST_INJECT_TS = 0.0
 CONSUME_WINDOW_S = 300.0
 PENDING_INJECT = None
 
+# crystal supersession: paths any crystal already provided this session.
+# A crystal re-providing context x is redundant - x is not needed again.
+SESSION_PATHS = {}
+
 # task direction: the distilled main task kept in memory as a semantic
 # compass. Raw text is MEMORY-ONLY (privacy law); the log keeps hashes.
 TASK_DIRECTIONS = {}
@@ -533,10 +537,11 @@ def choose(user_message, cfg, history="", session_id=""):
                   confs={h[0]["id"]: round(h[1][1], 3) for h in hits},
                   task_winner=rule.get("family") in task_fams,
                   task_fams=sorted(task_fams), mh=mhash(user_message))
-    return inject_for(rule, user_message, cfg, conf, dt, history=history)
+    return inject_for(rule, user_message, cfg, conf, dt, history=history,
+                      session_id=session_id)
 
 
-def inject_for(rule, user_message, cfg, conf, dt, history=""):
+def inject_for(rule, user_message, cfg, conf, dt, history="", session_id=""):
     paths = []
     if rule.get("content"):
         try:
@@ -544,12 +549,21 @@ def inject_for(rule, user_message, cfg, conf, dt, history=""):
         except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as e:
             log_event("haystack_error", err=str(e)[:120], mh=mhash(user_message))
         paths = [str(p) for p in paths]
-        # context-dedup: a crystal carrying context x makes re-providing x redundant
+        # context-dedup vs conversation history: already-present x is redundant
         fresh = [p for p in paths if p and p not in history]
         deduped = len(paths) - len(fresh)
         if deduped:
             log_event("context_dedup", rule=rule["id"], dropped=deduped,
                       kept=len(fresh), mh=mhash(user_message))
+        # crystal supersession vs this session's prior injections: context x
+        # provided once is not needed again (the crystal replaces the context)
+        seen = SESSION_PATHS.setdefault(session_id, set())
+        ss = [p for p in fresh if p in seen]
+        fresh = [p for p in fresh if p not in seen]
+        if ss:
+            log_event("superseded", rule=rule["id"], dropped=len(ss),
+                      paths=ss, mh=mhash(user_message))
+        seen.update(fresh)
         paths = fresh
     bump_evidence(rule["id"])
     global LAST_INJECT_TS

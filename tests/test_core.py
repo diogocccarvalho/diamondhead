@@ -117,6 +117,26 @@ def test_dimensions():
           any(e["kind"] == "contention" and e["winner"] == "notes-routing"
               and e["runner_up"] == "auto-72307acd" for e in ev))
 
+    # supersession: same session re-providing context x -> dropped, logged
+    core.BEHAVIOR_FILE.write_text("")
+    core.PENDING_INJECT = None
+    core.SESSION_PATHS.clear()
+    with mock.patch.object(core, "classify_multi", return_value={
+            "notes-routing": (True, 0.95, "yes", "d1-t")}), \
+         mock.patch.object(core, "haystack_top",
+                           return_value=["a/vpn.md", "a/new.md"]):
+        core.choose("where is the vpn note again", cfg, session_id="s1")
+        core.choose("where is the vpn note again", cfg, session_id="s1")
+    ev = core.behavior_events()
+    inj = [e for e in ev if e["kind"] == "inject"]
+    check("second injection drops already-provided paths",
+          len(inj) == 2 and inj[0]["paths"] == ["a/vpn.md", "a/new.md"]
+          and inj[1]["paths"] == [])
+    check("superseded event logs the redundant paths",
+          any(e["kind"] == "superseded" and e["dropped"] == 2
+              and e["paths"] == ["a/vpn.md", "a/new.md"] for e in ev))
+    core.SESSION_PATHS.clear()
+
     # near_miss: yes choice below gate -> logged with conf + gate, no inject
     core.BEHAVIOR_FILE.write_text("")
     core.PENDING_INJECT = None
