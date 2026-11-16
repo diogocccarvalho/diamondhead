@@ -56,6 +56,31 @@ turned into architecture: the router composes never-related pairings because
 memory supplies the parts and the link choice supplies the novelty. Blocks
 and memory are never creative; the *selection* is.
 
+## The interface block (Diogo, 2026-11-16)
+
+The core decomposes by role at the boundary, and TWO roles are orthogonal
+to any specific block:
+
+1. the semantic router — decides WHAT happens (inject or call a block);
+2. crystallization blocks — proven replay-verified functions, apply to
+   everything;
+3. the formation layer — decides IN WHAT SHAPE information crosses ANY
+   boundary (query before retrieval, message before a classifier, prompt
+   before an LLM, pointer before memory);
+4. memory/context injection — what the router emits (D5).
+
+The principle: every boundary is an interface, interfaces are first-class
+citizens - they carry their own crystals (rewrite-operator genomes), their
+own measured fitness per callee (Recall/MRR, TP/FP, output quality), and
+their own dream loop. In a no-LLM core this is structural, not an
+optimization: nothing "understands" sloppy input - the formation layer is
+the only thing standing between human-shaped utterances and machine-shaped
+function calls. D5 and D8 (pointers never replace; tokenizer-enforced
+length at the boundary) were two scattered views of this; promoted to a
+named block. Interface crystals differ from router crystals: the router
+selects between alternatives, the formation layer rewrites the payload of
+the selected path - different genome, different fitness, one pass each.
+
 ## Relation to the design rules
 
 - D3 (relevance judgment O(1)-ish): the router IS the relevance judge, and it
