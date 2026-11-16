@@ -1,0 +1,11 @@
+metric,value,source
+turns observed,50,measured
+injections fired,0,measured
+tokens injected (total),0,measured (chars/4)
+tokens injected (mean/injection),0,measured (chars/4)
+chooser p50 / p99 latency ms,945/4694,measured
+skip-gate 0ms turns,5,measured
+consumed rate,0% (0/0),measured
+judge-correct rate,0% (0 judged),measured
+no-crystal cost per naive turn (tokens),2500,SIMULATED
+net tokens (simulated savings - injected),0,SIMULATED: consumed injections x naive cost
