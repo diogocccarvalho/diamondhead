@@ -31,6 +31,7 @@ def init():
             "status": "hint",
             "evidence_n": 0,
             "source": "user-taught",
+            "ts": time.time(),
         }
         RULES_FILE.write_text(json.dumps(seed) + "\n")
     return RULES_FILE
@@ -74,17 +75,18 @@ PROMOTE_MIN_INJ = 5
 
 def rule_first_seen(rule_id):
     if RULES_FILE.exists():
-        first = None
+        ts_vals = []
         for line in RULES_FILE.read_text().splitlines():
             try:
                 r = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if r.get("id") == rule_id:
-                first = r if first is None else min(first, r, key=lambda x: x.get("ts", 0))
-        if first is not None:
-            return first.get("ts", 0)
-    return 0
+            if r.get("id") == rule_id and isinstance(r.get("ts"), (int, float)) \
+                    and r["ts"] > 0:
+                ts_vals.append(r["ts"])
+        if ts_vals:
+            return min(ts_vals)
+    return None
 
 
 def consumed_ratio(rule_id):
@@ -109,7 +111,10 @@ def behavior_events():
 def enforce_if_ready(rule_id, promote_n):
     n = rule_evidence(rule_id)
     ratio, inj = consumed_ratio(rule_id)
-    age = time.time() - rule_first_seen(rule_id)
+    first = rule_first_seen(rule_id)
+    if first is None:
+        return False
+    age = time.time() - first
     if n >= promote_n and inj >= PROMOTE_MIN_INJ and ratio >= PROMOTE_MIN_CONSUMED \
             and age >= PROMOTE_MIN_AGE_S:
         append_rule({"id": rule_id, "status": "enforced", "ts": time.time(),

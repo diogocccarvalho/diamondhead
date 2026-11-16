@@ -21,7 +21,8 @@ def main():
         if r.get("status") in ("candidate", "validated", "retracted", "hint"):
             rid = r["id"]
             ratio, inj = core.consumed_ratio(rid)
-            age_d = (core.time.time() - core.rule_first_seen(rid)) / 86400
+            first = core.rule_first_seen(rid)
+            age_d = f"{(core.time.time() - first) / 86400:.1f}" if first else "0 (no ts)"
             print(f"  {rid}: {r.get('status')} "
                   f"(evidence {core.rule_evidence(rid)}/20, "
                   f"injections {inj}/{core.PROMOTE_MIN_INJ}, "
