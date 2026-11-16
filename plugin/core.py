@@ -145,8 +145,55 @@ def append_rule(rec):
         f.write(json.dumps(rec) + "\n")
 
 
+# contract versioning: a crystal's operative fields hash into contract_sha;
+# changes require a version record; rollback restores the previous snapshot
+CONTRACT_FIELDS = ("trigger", "inject", "hint_words", "yes_label",
+                   "min_conf", "genome")
+
+
+def contract_sha(rule):
+    blob = json.dumps({k: rule.get(k) for k in CONTRACT_FIELDS},
+                      sort_keys=True)
+    return hashlib.sha256(blob.encode()).hexdigest()[:12]
+
+
+def bump_version(rule_id, fields):
+    """Append a new contract version (fields = full operative snapshot)."""
+    n = max((r.get("version", 0) for r in load_rules()
+             if r.get("id") == rule_id and r.get("version")), default=0) + 1
+    rec = {"id": rule_id, "status": "version", "version": n,
+           "contract_sha": contract_sha(fields), "ts": time.time()}
+    rec.update({k: fields.get(k) for k in CONTRACT_FIELDS})
+    append_rule(rec)
+    log_event("contract_version", rule=rule_id, version=n,
+              contract_sha=rec["contract_sha"])
+    return n
+
+
+def rollback_version(rule_id, to_version=None):
+    """Append-only rollback: restore the given (or previous) version's
+    fields as a NEW record. Replay stays lossless - rollbacks are history."""
+    recs = [r for r in load_rules() if r.get("id") == rule_id
+            and r.get("status") == "version"]
+    if not recs:
+        return None
+    recs.sort(key=lambda r: r["version"])
+    if to_version is None:
+        to_version = max(r["version"] for r in recs) - 1
+    snap = next((r for r in recs if r["version"] == to_version), None)
+    if snap is None:
+        return None
+    rec = {"id": rule_id, "status": "rollback", "to_version": to_version,
+           "contract_sha": snap["contract_sha"], "ts": time.time()}
+    rec.update({k: snap.get(k) for k in CONTRACT_FIELDS})
+    append_rule(rec)
+    log_event("contract_rollback", rule=rule_id, to_version=to_version)
+    return rec
+
+
 def replay_rules():
     state = {}
+    versions = {}
     for line in RULES_FILE.read_text().splitlines():
         if not line.strip():
             continue
@@ -162,10 +209,48 @@ def replay_rules():
             st["evidence_n"] += r.get("n", 1)
         elif r.get("status") == "retracted":
             state[rid] = {"status": "retracted", "evidence_n": 0}
+        elif r.get("status") == "version":
+            versions[rid] = dict(r)
+            cur = state.setdefault(rid, {"evidence_n": 0})
+            cur.update({k: r.get(k) for k in CONTRACT_FIELDS})
+            cur["contract_sha"] = r.get("contract_sha")
+            cur["version"] = r.get("version")
+        elif r.get("status") == "rollback":
+            cur = state.setdefault(rid, {"evidence_n": 0})
+            cur.update({k: r.get(k) for k in CONTRACT_FIELDS})
+            cur["contract_sha"] = r.get("contract_sha")
+            cur["version"] = r.get("to_version")
         else:
             cur = state.setdefault(rid, {"evidence_n": 0})
             cur["status"] = r.get("status", cur.get("status", "hint"))
     return state
+
+
+def audit_contracts():
+    """Provenance pass for the store: flag rules whose operative fields
+    changed without a version/rollback record carrying the new sha."""
+    problems = []
+    live = {}
+    for line in RULES_FILE.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            r = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        rid = r.get("id")
+        if not rid or r.get("status") in ("evidence", "promote"):
+            continue
+        if r.get("status") in ("version", "rollback"):
+            live[rid] = {k: r.get(k) for k in CONTRACT_FIELDS}
+        elif r.get("status") not in ("retracted",):
+            merged = dict(live.get(rid, {}))
+            merged.update({k: r[k] for k in CONTRACT_FIELDS if k in r})
+            if merged != live.get(rid) and rid in live:
+                problems.append({"id": rid, "kind": r.get("status"),
+                                 "unversioned_field_change": True})
+            live[rid] = merged
+    return problems
 
 
 def bump_evidence(rule_id, n=1):

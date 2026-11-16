@@ -186,6 +186,33 @@ def test_dimensions():
     check("no inject on near miss", not any(e["kind"] == "inject" for e in ev))
 
 
+
+def test_contracts():
+    core.init()
+    check("contract sha changes when operative fields change",
+          core.contract_sha({"inject": "a"}) != core.contract_sha({"inject": "b"})
+          and core.contract_sha({"inject": "a", "genome": ["x"]})
+          != core.contract_sha({"inject": "a", "genome": ["y"]}))
+
+    # bump -> rollback -> replay restores previous fields
+    n = core.bump_version("notes-routing", {"inject": "v1 template",
+                                            "genome": ["patch", "terminal"]})
+    core.bump_version("notes-routing", {"inject": "v2 template",
+                                        "genome": ["patch", "terminal"]})
+    check("version counter advances", n == 2)
+    core.rollback_version("notes-routing")
+    st = core.replay_rules()["notes-routing"]
+    check("rollback restores previous version fields in replay",
+          st.get("inject") == "v1 template" and st.get("version") == 1)
+
+    # audit flags unversioned operative change
+    core.append_rule({"id": "notes-routing", "status": "hint",
+                      "inject": "sneaky unversioned change", "ts": core.time.time()})
+    problems = core.audit_contracts()
+    check("audit flags unversioned field change",
+          any(p["id"] == "notes-routing" for p in problems))
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="dh-test-")
     core.DATA = Path(tmp)
@@ -425,6 +452,7 @@ def main():
     test_dimensions()
     test_dream()
     test_task_direction()
+    test_contracts()
 
     # golden replay: what works today must not silently change
     import subprocess
