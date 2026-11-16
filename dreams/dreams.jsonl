@@ -28,3 +28,5 @@
 {"ts": 1794844108.2351089, "parent": "notes-routing", "mutant": "notes-routing-dpar-45e779", "direction": "paraphrase", "variant": 1}
 {"ts": 1794845423.4865382, "parent": "notes-routing", "mutant": "notes-routing-dsha-e5a4ba", "direction": "sharpen", "variant": 0}
 {"ts": 1794845423.4873645, "parent": "notes-routing", "mutant": "notes-routing-dsha-43a6cc", "direction": "sharpen", "variant": 1}
+{"ts": 1794845905.5028481, "parent": "notes-routing", "mutant": "notes-routing-dcos-2f3003", "direction": "cost", "variant": 0}
+{"ts": 1794845905.5036168, "parent": "notes-routing", "mutant": "notes-routing-dpar-2f2644", "direction": "paraphrase", "variant": 0}
