@@ -169,3 +169,6 @@ as dominance on that distribution, never in the abstract.
 ## License
 
 MIT
+
+## Separation of concerns (2026-11-16, Diogo framing)
+- haystack and diamondhead are TWO separate things: haystack = the relation/index layer over CONTENT (notes, facts, memory); diamondhead = the same shape over ACTIONS (skills, tools, procedures). The pre-LLM hook is a SEMANTIC FUNCTION CHOOSER: it selects which function runs (diamondhead's own substrate: behavior log + rule store) and the chosen function's INPUTS come from haystack (content retrieval). Two consumption edges, never merged. Crystallization = promoting a function from judged-each-time to proven-once-fires-on-trigger. Abstract: haystack indexes what we know, diamondhead indexes what we do; the chooser is the join.
