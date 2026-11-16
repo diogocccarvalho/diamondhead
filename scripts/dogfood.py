@@ -23,8 +23,9 @@ def main():
             ratio, inj = core.consumed_ratio(rid)
             first = core.rule_first_seen(rid)
             age_d = f"{(core.time.time() - first) / 86400:.1f}" if first else "0 (no ts)"
+            ev_n = core.rule_evidence(rid) or r.get("evidence_n", 0)
             print(f"  {rid}: {r.get('status')} "
-                  f"(evidence {core.rule_evidence(rid)}/20, "
+                  f"(evidence {ev_n}/20, "
                   f"injections {inj}/{core.PROMOTE_MIN_INJ}, "
                   f"consumed {ratio:.0%} vs >=80%, age {age_d}d vs >=7d)")
     ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()
