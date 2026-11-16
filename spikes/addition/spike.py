@@ -129,7 +129,8 @@ def replay_ledger():
         "promoted": sorted(m for m, e in latest.items()
                            if e["kind"] == "verdict" and e["promoted"]),
         "rejected": sorted(m for m, e in latest.items()
-                           if e["kind"] == "verdict" and e["status"] == "rejected"),
+                           if e["kind"] == "verdict"
+                           and e.get("status") == "rejected"),
         "lossless": all(e.get("outputs_sha") for e in events if e["kind"] == "verdict"),
     }
 
