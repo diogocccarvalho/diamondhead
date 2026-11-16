@@ -68,6 +68,34 @@ def test_dream():
     check("dream ledger line appended", dream.LEDGER.exists())
 
 
+def test_task_direction():
+    # distilled once per session; raw text memory-only
+    core.TASK_DIRECTIONS.clear()
+    core.BEHAVIOR_FILE.write_text("")
+    t = core.set_task_direction("sess-abc-123", "refactor the router and   "
+                                "make sure the tests pass afterwards, then "
+                                "commit everything  ")
+    check("direction distilled (whitespace normalized, truncated)",
+          t == "refactor the router and make sure the tests pass afterwards,"
+               " then commit everything"[:300]
+          or t.startswith("refactor the router and make sure the tests"))
+    ev = core.behavior_events()
+    check("direction_set logs hash only, never raw text",
+          any(e["kind"] == "direction_set" for e in ev)
+          and "refactor" not in open(core.BEHAVIOR_FILE).read())
+    # compass injects each turn
+    line = core.task_direction_inject("sess-abc-123")
+    check("compass injects with reasoning scaffold",
+          line is not None and line.startswith("Main task:")
+          and "checkpoints" in line)
+    # other sessions get nothing
+    check("no compass for unknown session",
+          core.task_direction_inject("other") is None)
+    # re-set overwrites (same session, corrected task)
+    core.set_task_direction("sess-abc-123", "actually the task is X instead")
+    check("re-distill overwrites", len(core.TASK_DIRECTIONS) == 1)
+
+
 def test_dimensions():
     cfg = {"d1_url": "http://x", "haystack_url": "http://y",
            "min_confidence": 0.80, "promote_n": 20}
@@ -341,6 +369,7 @@ def main():
     n_fail = sum(1 for _, ok, _ in results if not ok)
     test_dimensions()
     test_dream()
+    test_task_direction()
     print(f"{len(results) - n_fail}/{len(results)} passed")
     sys.exit(1 if n_fail else 0)
 

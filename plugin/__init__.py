@@ -1,4 +1,5 @@
 import sys
+import threading
 import time
 import traceback
 from pathlib import Path
@@ -6,6 +7,26 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import core
+
+_HOUSEKEEP_LOCK = threading.Lock()
+_HOUSEKEEP_EVERY = 20  # turns
+_TURN_COUNT = [0]
+
+
+def _housekeep(cfg):
+    """Runs CONCURRENTLY with turns, never on the turn's critical path:
+    dreaming + candidate mining happen in a daemon thread."""
+    if not _HOUSEKEEP_LOCK.acquire(blocking=False):
+        return
+    try:
+        scripts = Path(core.__file__).parent.parent / "scripts"
+        sys.path.insert(0, str(scripts))
+        import dream
+        dream.dream()
+    except Exception:
+        core.log_event("housekeep_error", err=traceback.format_exc()[-120:])
+    finally:
+        _HOUSEKEEP_LOCK.release()
 
 
 def register(ctx):
@@ -29,16 +50,31 @@ def register(ctx):
                 core.record_correction(corr, core.mhash(user_message))
         except Exception:
             pass
+        # task direction: distilled once per session, compass every turn
+        direction = None
+        try:
+            if is_first_turn and len(user_message.strip()) >= core.DIRECTION_MIN_LEN \
+                    and not core.SKIP_RE.match(user_message.strip()):
+                core.set_task_direction(session_id, user_message)
+            direction = core.task_direction_inject(session_id)
+        except Exception:
+            pass
         try:
             text, conf, ms = core.choose(user_message, cfg,
                                          history=conversation_history or "")
         except Exception:
             core.log_event("chooser_crash", err=traceback.format_exc()[-200:])
-            return None
+            return direction
         core.log_event("turn", ms=round((time.monotonic() - t0) * 1000),
-                       injected=bool(text), platform=platform or "",
+                       injected=bool(text) or bool(direction),
+                       platform=platform or "",
                        mh=core.mhash(user_message))
-        return text
+        if _TURN_COUNT[0] % _HOUSEKEEP_EVERY == _HOUSEKEEP_EVERY - 1:
+            threading.Thread(target=_housekeep, args=(cfg,), daemon=True).start()
+        _TURN_COUNT[0] += 1
+        if direction and text:
+            return direction + "\n" + text
+        return direction or text
 
     def post_tool_call(tool_name="", args=None, result="", task_id="",
                        duration_ms=0, **kwargs):

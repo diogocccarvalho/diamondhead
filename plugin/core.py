@@ -1,6 +1,7 @@
 import hashlib
 import json
 import re
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -263,6 +264,8 @@ CRYSTAL_SPECS = {
             "(e.g. diamondhead, haystack, notes-router) counts as yes."),
         "inject": INJECT_TEMPLATE,
         "hint_words": [],
+        "compass_words": ["note", "notes", "vault", "haystack", "schedule",
+                          "backlog", "research", "project"],
         "content": True,
     },
     "code-change loop": {
@@ -297,9 +300,26 @@ CRYSTAL_SPECS = {
 def rule_fields(rule):
     spec = CRYSTAL_SPECS.get(rule.get("family"), {})
     out = dict(rule)
-    for k in ("trigger", "inject", "hint_words", "content"):
-        out.setdefault(k, spec.get(k, [] if k == "hint_words" else ("" if k != "content" else False)))
+    for k in ("trigger", "inject", "hint_words", "compass_words", "content"):
+        out.setdefault(k, spec.get(k, [] if k in ("hint_words", "compass_words")
+                                   else ("" if k != "content" else False)))
     return out
+
+
+def task_families(session_id, rules):
+    """Which crystal families serve the session's task direction: the task
+    steers DiamondHead's own machinery (dream priority, arbitration notes),
+    not just the LLM call."""
+    d = TASK_DIRECTIONS.get(session_id)
+    if not d:
+        return set()
+    t = d["text"].lower()
+    fams = set()
+    for r in rules:
+        words = r.get("compass_words") or r.get("hint_words") or []
+        if any(w in t for w in words):
+            fams.add(r.get("family"))
+    return {f for f in fams if f}
 
 
 def _classify_one(text, rule, url, min_conf):
@@ -357,6 +377,36 @@ LAST_INJECT_TS = 0.0
 CONSUME_WINDOW_S = 300.0
 PENDING_INJECT = None
 
+# task direction: the distilled main task kept in memory as a semantic
+# compass. Raw text is MEMORY-ONLY (privacy law); the log keeps hashes.
+TASK_DIRECTIONS = {}
+DIRECTION_MIN_LEN = 30
+# works WITH the reasoning chain, not in front of it: checkpoints the
+# model's own thinking walks through, not commands it must obey
+DIRECTION_INJECT = (
+    "[reasoning scaffold] As you reason, carry these checkpoints: "
+    "(1) split the main task into parts that don't depend on each other "
+    "and run those in parallel; (2) at each decision, name which part it "
+    "serves; (3) if a step stops serving the main task, drop it; "
+    "(4) before finishing, re-check every part was done, not just attempted.")
+
+
+def set_task_direction(session_id, text):
+    t = " ".join(text.split())[:300]
+    TASK_DIRECTIONS[session_id] = {"text": t, "ts": time.time(),
+                                   "mh": mhash(text)}
+    log_event("direction_set", session=session_id[-8:], chars=len(t),
+              mh=mhash(text))
+    return t
+
+
+def task_direction_inject(session_id):
+    d = TASK_DIRECTIONS.get(session_id)
+    if not d:
+        return None
+    log_event("direction_inject", session=session_id[-8:], mh=d["mh"])
+    return f"Main task: {d['text']}\n{DIRECTION_INJECT}"
+
 
 def judge_context(text, url):
     """Second semantic dimension: was the crystal's trigger context correct?"""
@@ -393,16 +443,21 @@ def close_pending_inject(cfg=None):
                   waited_s=round(time.time() - PENDING_INJECT["ts"]),
                   mh=PENDING_INJECT["mh"])
     text = PENDING_INJECT.get("text")
-    if text and cfg:
-        try:
-            correct, conf, model = judge_context(text, cfg["d1_url"])
-            log_event("context_judge", rule=PENDING_INJECT["rule"],
-                      correct=correct, conf=round(conf, 3),
-                      model=model[:60], mh=PENDING_INJECT["mh"])
-        except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError):
-            log_event("context_judge_error", rule=PENDING_INJECT["rule"],
-                      mh=PENDING_INJECT["mh"])
+    pend = dict(PENDING_INJECT)
     PENDING_INJECT = None
+    if text and cfg:
+        # judge OFF the turn's critical path: runs concurrently with the turn
+        def _judge():
+            try:
+                correct, conf, model = judge_context(text, cfg["d1_url"])
+                log_event("context_judge", rule=pend["rule"],
+                          correct=correct, conf=round(conf, 3),
+                          model=model[:60], mh=pend["mh"])
+            except (urllib.error.URLError, TimeoutError, OSError,
+                    KeyError, ValueError):
+                log_event("context_judge_error", rule=pend["rule"],
+                          mh=pend["mh"])
+        threading.Thread(target=_judge, daemon=True).start()
 
 
 def open_pending_inject(rule_id, mh, enforced, text=""):
@@ -426,11 +481,12 @@ def mhash(text):
     return hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()[:12]
 
 
-def choose(user_message, cfg, history=""):
+def choose(user_message, cfg, history="", session_id=""):
     rules = live_rules(load_rules())
     if not rules or not plausibly_notes(user_message):
         return None, 0.0, 0.0
     rules = [rule_fields(r) for r in rules]
+    task_fams = task_families(session_id, rules)
     cand, skipped = [], []
     for r in rules:
         words = r.get("hint_words") or []
@@ -475,7 +531,8 @@ def choose(user_message, cfg, history=""):
                     key=lambda x: x[1][1])
         log_event("contention", winner=rule["id"], runner_up=loser[0]["id"],
                   confs={h[0]["id"]: round(h[1][1], 3) for h in hits},
-                  mh=mhash(user_message))
+                  task_winner=rule.get("family") in task_fams,
+                  task_fams=sorted(task_fams), mh=mhash(user_message))
     return inject_for(rule, user_message, cfg, conf, dt, history=history)
 
 

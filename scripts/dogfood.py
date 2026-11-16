@@ -26,26 +26,26 @@ def conf_stats(events, rid):
 
 
 def dream_direction(rid, stats, counts, rule_events):
-    """Mutation direction per concept: the family's failure profile IS the
-    dream's search distribution."""
+    """Selection signal per concept. Mutation is RANDOM — this failure
+    profile is what the SELECTION gates will judge mutants against, never
+    a steering wheel for the generator."""
     near = rule_events.get(("near_miss", rid), 0)
     inj = rule_events.get(("inject", rid), 0)
     cont = rule_events.get(("contention", rid), 0)
     dev = rule_events.get(("deviation", rid), 0)
-    if stats is None and near == 0:
-        return "no signal yet — dreams blind (priority: accumulate fires)"
-    if dev > 0 and dev >= inj * 0.2:
-        return "obedience failures dominate — dream sharper procedure wording"
-    if cont > 0 and cont >= inj:
-        return "contention dominates — dream trigger narrowing / arbitration"
+    sig = []
+    if dev:
+        sig.append(f"deviation {dev}")
+    if cont:
+        sig.append(f"contention {cont}")
+    if near:
+        sig.append(f"near_miss {near}")
     if stats and stats[1] >= 0.15:
-        return (f"wobbly trigger (conf std {stats[1]:.2f}) — dream trigger "
-                f"paraphrases + more evidence before promotion")
-    if near > inj and near >= 3:
-        return "near-misses dominate — dream trigger paraphrase robustness"
-    if inj >= 3:
-        return "healthy — dream cost shape (hot/cold judge)"
-    return "young — accumulate measured fires first"
+        sig.append(f"wobble std {stats[1]:.2f}")
+    prof = ("; ".join(sig) or "no failures yet")
+    if inj < 3:
+        return f"young (inj {inj}) — selection signal: {prof}"
+    return f"selection signal: {prof} — gates will judge random mutants on this"
 
 
 def main():

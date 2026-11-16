@@ -86,16 +86,13 @@ def pick_family(rules, profile):
 
 
 def direction_for(r, profile):
-    p = profile.get(r["id"], {})
-    if p.get("deviation", 0) >= max(1, 0.2 * p.get("inject", 0)):
-        return "sharpen"
-    if p.get("contention", 0) >= p.get("inject", 0):
-        return "narrow"
-    if p.get("near_miss", 0) > p.get("inject", 0) and p.get("near_miss", 0) >= 3:
-        return "paraphrase"
-    if p.get("inject", 0) >= 3:
-        return "sharpen"
-    return None
+    """Mutation is RANDOM (genetic: dumb mutation, strict selection) —
+    the failure profile belongs to SELECTION (the gates), never to the
+    generator. Only usage decides IF a family dreams; the operator is a
+    uniform draw."""
+    import random
+    return random.choice(["paraphrase", "paraphrase", "narrow",
+                          "sharpen", "sharpen", "cost"])
 
 
 def mutate(r, direction, idx):
@@ -111,6 +108,10 @@ def mutate(r, direction, idx):
     elif direction == "narrow":
         mutant["trigger"] = r.get("trigger", "") + NARROW.get(fam, "")
         mutant["inject"] = r.get("inject", "")
+    elif direction == "cost":
+        # random token-pressure operator: shortest known wording
+        mutant["trigger"] = r.get("trigger", "")
+        mutant["inject"] = SHARPEN.get(fam, r.get("inject", ""))[:120]
     else:  # sharpen: procedure wording, trigger untouched
         mutant["trigger"] = r.get("trigger", "")
         mutant["inject"] = SHARPEN.get(fam, r.get("inject", ""))
@@ -131,10 +132,11 @@ def dream():
             return None, (f"{rules[0]['id']}: young — accumulate fires first")
         return None, "no live crystals to dream about"
     r = core.rule_fields(r)
-    direction = direction_for(r, profile)
-    if direction is None:
-        return None, (f"{r['id']}: young (inject {profile.get(r['id'], {}).get('inject', 0)}) "
+    if profile.get(r["id"], {}).get("inject", 0) < 3:
+        return None, (f"{r['id']}: young (inject "
+                      f"{profile.get(r['id'], {}).get('inject', 0)}) "
                       "- accumulate fires first")
+    direction = direction_for(r, profile)
     idx = max([x.get("variant", -1) for x in core.load_rules()
                if x.get("parent") == r["id"] and x.get("direction") == direction]
               + [-1]) + 1
