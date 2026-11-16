@@ -102,3 +102,26 @@ D1. Gateway bounce after every plugin edit (currently pending for the
     direction/concurrency code).
 D2. Morning-brief/dogfood: report injections fired + consumed, never "it
     runs."
+
+## A-verdicts (2026-11-16, adversarial pass - incrementally proven/disproven)
+
+- A1 DISPROVED + REVERTED: fusion 0.8 gain did not transfer to the hard pair
+  set (0.7 wins 0.813 vs 0.750 MRR). qa_gen is a biased eval. Held-out
+  second gate now mandatory. (Also: audit qa.json is saturated - cannot
+  discriminate anything.)
+- A2 DISPROVED (my own worry): d1 is deterministic run-to-run on identical
+  requests (0 choice flips, 0 >0.1 conf drift across 27 rows x rules). The
+  earlier '+-0.2 wobble' was cross-config: prompt/label CHANGES move
+  verdicts, not noise. Consequence: prompts are part of the gate - they get
+  frozen and tuned only in the sim, like any other gate constant.
+- A5 CONFIRMED: the champion genome fails 60/123 negative-domain inputs
+  while passing the 'exhaustive' gate - because the gate's domain (b>=0) was
+  chosen to exclude negatives. Every proof must STATE its domain; a proof
+  silent about its domain is marketing. Stage-2 law.
+- A6 CONFIRMED, deepest finding: pure-random founders -> NO champion in 8
+  generations. The proof gate is BINARY (byte-identical or dead) so there is
+  no fitness gradient to climb; structural mutation cannot walk a cliff.
+  'No gradients, prove once' collides with search needing gradients.
+  Dreaming therefore needs either informed seeds (prior art - what worked
+  today) or a graded intermediate signal for SURVIVAL while promotion stays
+  proof-gated. This tension is a stage-2 design problem, not a bug.
