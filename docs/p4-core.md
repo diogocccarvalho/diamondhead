@@ -133,6 +133,54 @@ interface block above. Build trigger: after the finish-everything wave
 lands and the prototype nursery (haystack distro-cluster case) has
 measured numbers.
 
+## Truth maintenance: the ground-truth bit (Diogo, 2026-11-16)
+
+The architecture's stance today is "provable to work" (replay, gates). It
+has no "is it TRUE" verdict. Added: every stored claim carries a
+ground-truth bit, one of: TRUE / UNTRUE / BEST-AVAILABLE / NO-BETTER-
+OPTION-YET. The bit is assigned by the system's OWN work and research
+(runs, experiments, citations, contradictions found), not by authority or
+provenance alone - finding something that at least SEEMS like the actual
+truth, with the evidence linked. The bit is upgradable: BEST-AVAILABLE ->
+TRUE when independent evidence accumulates; TRUE -> UNTRUE on a
+contradiction (the supersession chain's head). Contradiction detection is
+the trigger that flips bits; retrieval surfaces the bit with the claim.
+This makes truth maintenance a first-class block: assertions enter with a
+bit, bits move only through evidence events, and the append-only log
+records every move.
+
+## The ceiling principle (Diogo, 2026-11-16)
+
+The architecture has a performance ceiling: set by the quality of the
+crystallization of all involved parts, the dreaming budget, and the
+evidence gates - it can always get theoretically better, but at any
+moment there is a MAX PERFORMANCE, and it is a measurable number, not a
+mood. Two consequences: (1) per-block ceilings are stated and measured
+(the spike's space floor is the seed; retrieval's MRR ceiling is bounded
+by index quality), so "how close are we" is always answerable; (2) the
+architecture's job is to approach the ceiling, not to claim perfection -
+claims of unlimited upside are flagged as unmeasured. The ceiling is
+itself movable only by new primitives (a new op language, a new index),
+which are one-time human or A6-costed decisions.
+
+## Missing concepts (audited 2026-11-16, open until designed)
+
+1. Truth maintenance (above - the ground-truth bit is its mechanism).
+2. Forgetting/decay: additive memory needs demotion; D4 makes storage
+   forgetting cheap (re-derivable), but retrieval needs validity decay -
+   stale notes and dead crystals occupy ranking/candidate lists forever.
+3. Identity resolution: nickname/alias -> canonical concept (the distro-
+   cluster failure IS this); user-taught aliases in the D1 invariant
+   layer, learned aliases gated like crystals.
+4. Confidence propagation: verdicts carry confidence downstream and gate
+   spend (low conf -> ask, don't act); near_miss/min_conf are partial
+   instances.
+5. Time/freshness: "when was this true" - validity windows distinct from
+   relevance.
+6. Budget/priority scheduling: finite compute across candidate actions;
+   dream-priority is the first instance, a global allocator comes when
+   blocks multiply.
+
 ## Relation to the design rules
 
 - D3 (relevance judgment O(1)-ish): the router IS the relevance judge, and it
