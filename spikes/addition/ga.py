@@ -37,7 +37,8 @@ CONST_ALPHABET = [1, 2, 4, 8, 16, 32, 64, -1, -2, -4, 0, 3, 6, 10]
 MAX_BITS = 13
 MAX_OPS = 14
 HOT_SHARE = 0.7
-WHILE_CHUNK_SIZES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
+WHILE_CHUNK_SIZES = [2, 4, 8, 16, 32, 64, 128, 256, 512]
+MAX_WHILE_ITERATIONS = 200  # safety cap per while_chunk invocation
 
 
 # ---- genome <-> executable ----
@@ -56,9 +57,11 @@ def interpret(genome, a, b):
                 b -= op[1]
         elif kind == "while_chunk":
             k = op[1]
-            while b >= k:
+            iterations = 0
+            while b >= k and iterations < MAX_WHILE_ITERATIONS:
                 r += k
                 b -= k
+                iterations += 1
         else:
             raise ValueError(f"illegal op {kind}")
     return r
