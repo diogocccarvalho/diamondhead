@@ -99,6 +99,32 @@ Audit of the interface block (2026-11-16, four errors found and fixed):
 - I5 no implicit chaining: rewrites are single-boundary; a bad rewrite at
   boundary 1 must not silently mutate what boundary 2 receives.
 
+## The meta-block: improvement of improvement (Diogo, 2026-11-16)
+
+'How do we maximize information usefulness across blocks - a semantic
+block that trains itself to pass information around.' Audited: real, but
+only as the DREAM LOOP APPLIED RECURSIVELY - the improvers' configuration
+(rewrite-op genomes, chooser thresholds, selection weights) becomes itself
+the genome set. Five errors fixed for it to be architecture:
+
+- M1 credit assignment: one change per boundary at a time; fitness is
+  attributed per boundary, never joint (aggregate fitness is confounded).
+- M2 Goodhart at every level: each meta-level needs the two-gate law
+  (measured fitness + frozen raw fixtures). The outermost guards are user
+  + community + time (the A3 stance recursing).
+- M3 regress terminates: the improver needs no meta-improver - mutation is
+  random, selection is strict; more MEASURED GENERATIONS do the work, not
+  more layers. A6 is the boundary: informed seeds are a one-time human
+  cost, not a regress.
+- M4 usefulness is marginal, not intrinsic: value = measured downstream
+  delta GIVEN receiver state (supersession is the canonical case). The
+  plugin's dimensions (superseded, contention, near_miss, consumed) are
+  already the training data - the meta-block dreams over logged
+  dimensions.
+- M5 no live self-training: I4 recurses - all self-training is offline in
+  the dream loop; runtime is always frozen; B5 contract versioning is the
+  drift safety net.
+
 Sequencing decision (Diogo, 2026-11-16): the formation layer is ITS OWN
 project, not folded into current workstreams - do not build yet. Scope:
 implemented ONCE, deployed across all layers - as a plugin proof of
