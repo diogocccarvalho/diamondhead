@@ -1,0 +1,1 @@
+{"id": "capture-567a8dcf86", "ts": 1794870388.093359, "steps": ["identify failing check", "reproduce standalone", "diff test setup vs passing case"], "claim": "suite flakes when a section leaks store state into later sections", "oracle_hint": "reset_all between sections makes the flake disappear across 25 runs", "verdict": "unproven - no oracle yet"}
