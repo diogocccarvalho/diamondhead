@@ -135,3 +135,31 @@ largest sampled winning file. Real saving = avoided SEARCH (wrong reads,
 re-derivation, user questions), which is unbounded and was never the
 denominator. Committed in haystack 1c095ce; token_metrics.py carries the
 correction. A4 closed.
+
+## E. Query-formation pass (Diogo, 2026-11-16 - P3 pass, P2 prototype possible)
+
+'go for it' was not the best way to say 'keep working on task X'. The
+architecture needs a QUERY-FORMATION PASS: before any callee (haystack, d1,
+any LLM), form the input that maximizes that callee's measured performance.
+
+- In-repo evidence it matters: (1) d1 verdicts flip on prompt/label wording
+  (A2: 'research loop' vs 'needs web research' flipped 0.87-no ->
+  0.91-yes - the hand prompt-tuning in the sim IS this pass, done manually);
+  (2) haystack normalize_query (filler stripping) is a frozen hand-written
+  rewrite operator; (3) A1: query style (nickname vs literal) is where
+  retrieval fails.
+- Genome: chain of rewrite operators (strip filler, synonym expansion,
+  PT<->EN normalization, label rephrasing, sub-query decomposition,
+  constraint add). Mutation = structural operators on the chain (GA law
+  holds).
+- Fitness axis per callee: Recall/MRR (haystack), TP/FP discriminative
+  power (d1 sim). Selection: existing gates.
+- BOUNDARY (do not merge layers): reformatting is NOT intent resolution.
+  'go for it' -> 'continue the router task' needs session STATE, not
+  rephrasing. The pass consumes the task direction (the compass) as input;
+  state supplies intent, the pass supplies form. Two crystals.
+- P3 form: the rewriter itself must be a crystallized operator chain
+  (no-LLM law) - genome above.
+- P2 prototype (buildable now): rewrite-operator genome swept against the
+  haystack evals with the hard-pairs held-out gate (A1 discipline). First
+  measured numbers would be the pass's proof of concept.
