@@ -114,6 +114,21 @@ def main():
         text, conf, ms = core.choose("where is the VPN note", cfg)
     check("haystack-down still injects", text is not None and "notes-router" in text)
 
+    # corrections ingest
+    check("positive correction detected",
+          core.note_correction("hey use notes-router for that") ==
+          {"kind": "positive", "target": "notes-routing"})
+    check("negative correction detected",
+          (core.note_correction("wrong skill, stop that") or {}).get("kind") == "negative")
+    check("plain question not a correction", core.note_correction("where is the VPN note") is None)
+    n0 = core.rule_evidence("notes-routing")
+    core.record_correction({"kind": "positive", "target": "notes-routing"})
+    check("positive correction bumps evidence",
+          core.rule_evidence("notes-routing") == n0 + 1)
+    ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
+    check("correction logged",
+          any(e.get("corr_kind") == "positive" for e in ev if e["kind"] == "correction"))
+
     # observe_tool + consumption
     core.LAST_INJECT_TS = 0.0
     core.observe_tool("skill_view", 12.3, "t1")

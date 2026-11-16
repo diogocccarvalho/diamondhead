@@ -52,7 +52,7 @@ def mut_hot_lookup(a, b):
     for i in range(16):
         table[i] = r
         r += 1
-    if b < 16:
+    if 0 <= b < 16:
         return a + table[b]
     r = a
     while b >= 16:
@@ -87,6 +87,19 @@ def run(fn, cases):
     return out, (time.perf_counter() - t0)
 
 
+PROBE_CASES = ((0, 0), (5, 0), (0, 7), (-5, 3), (5, -3), (-5, -3), (3, 10**6))
+
+
+def domain_probe(fn):
+    for a, b in PROBE_CASES:
+        try:
+            fn(a, b)
+        except Exception as e:
+            return {"fn": fn.__name__, "crash": f"{type(e).__name__}: {e}",
+                    "input": [a, b]}
+    return {"fn": fn.__name__, "crash": None}
+
+
 def log(event):
     with LEDGER.open("a") as f:
         f.write(json.dumps(event, sort_keys=True) + "\n")
@@ -116,11 +129,20 @@ def main():
 
     base_out, base_t = run(naive_add, cases)
 
+    probes = {}
+    for name, fn in MUTANTS.items():
+        probes[name] = domain_probe(fn)
+        log({"kind": "domain_probe", "mutant": name, **probes[name]})
+        if probes[name]["crash"]:
+            print(f"DOMAIN PROBE {name}: CRASH {probes[name]['crash']} "
+                  f"on {probes[name]['input']}")
+
     for name, fn in MUTANTS.items():
         out, t = run(fn, cases)
         identical = out == base_out
         cheaper = t < base_t
-        promoted = identical and cheaper
+        crash = probes[name]["crash"]
+        promoted = identical and cheaper and not crash
         log({
             "kind": "verdict",
             "mutant": name,

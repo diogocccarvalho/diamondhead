@@ -89,6 +89,27 @@ SKIP_RE = re.compile(r"^\s*/|^(!|hi|hey|ok|thanks|yes|no)\b.{0,12}$", re.I)
 MIN_LEN = 12
 
 
+CORRECTION_POS = re.compile(
+    r"\b(use|load|check|try|consult)\s+(the\s+)?(notes[-\s]?router|haystack)\b", re.I)
+CORRECTION_NEG = re.compile(
+    r"\b(wrong|incorrect|bad|don'?t|stop|no,)\b.{0,40}?\b(skill|route|routing|rule|that)\b", re.I)
+CORRECTION_FAMILY = "notes-routing"
+
+
+def note_correction(text):
+    if CORRECTION_POS.search(text):
+        return {"kind": "positive", "target": CORRECTION_FAMILY}
+    if CORRECTION_NEG.search(text):
+        return {"kind": "negative", "target": None}
+    return None
+
+
+def record_correction(corr, mh=""):
+    log_event("correction", corr_kind=corr["kind"], target=corr["target"], mh=mh)
+    if corr["kind"] == "positive" and corr["target"]:
+        bump_evidence(corr["target"])
+
+
 def plausibly_notes(text):
     t = text.strip()
     return len(t) >= MIN_LEN and not SKIP_RE.match(t)

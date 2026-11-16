@@ -24,6 +24,12 @@ def register(ctx):
         if not cfg["inject_enabled"] or not user_message:
             return None
         try:
+            corr = core.note_correction(user_message)
+            if corr:
+                core.record_correction(corr, core.mhash(user_message))
+        except Exception:
+            pass
+        try:
             text, conf, ms = core.choose(user_message, cfg)
         except Exception:
             core.log_event("chooser_crash", err=traceback.format_exc()[-200:])

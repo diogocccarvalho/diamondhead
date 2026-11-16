@@ -20,3 +20,9 @@
 {"identical": true, "kind": "verdict", "mutant": "double_add", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 4.29, "t_oracle_ms": 143.42}
 {"identical": true, "kind": "verdict", "mutant": "chunk4", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 87.02, "t_oracle_ms": 143.42}
 {"identical": true, "kind": "verdict", "mutant": "hot_lookup", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 22.01, "t_oracle_ms": 143.42}
+{"crash": null, "fn": "mut_double_add", "kind": "domain_probe", "mutant": "double_add"}
+{"crash": null, "fn": "mut_chunk4", "kind": "domain_probe", "mutant": "chunk4"}
+{"crash": null, "fn": "mut_hot_lookup", "kind": "domain_probe", "mutant": "hot_lookup"}
+{"identical": true, "kind": "verdict", "mutant": "double_add", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 4.43, "t_oracle_ms": 144.15}
+{"identical": true, "kind": "verdict", "mutant": "chunk4", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 87.76, "t_oracle_ms": 144.15}
+{"identical": true, "kind": "verdict", "mutant": "hot_lookup", "oracle_sha": "510b60fd2c76", "outputs_sha": "510b60fd2c76", "promoted": true, "status": "promoted", "t_mut_ms": 22.15, "t_oracle_ms": 144.15}
