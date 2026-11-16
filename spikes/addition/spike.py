@@ -1,0 +1,141 @@
+"""Spike: proof-gated crystallization of addition.
+
+Frozen naive adder = the oracle (ground truth, never mutated).
+Mutants are dreamed at random from a grammar of additions; the replay gate
+(byte-identical over the workload distribution + measured cheaper) decides
+promotion. Append-only ledger records every verdict.
+"""
+import json
+import random
+import time
+from pathlib import Path
+
+HERE = Path(__file__).parent
+LEDGER = HERE / "ledger.jsonl"
+DISTRIBUTION_FILE = HERE / "workload.json"
+
+
+# ---- oracle: frozen, never mutated ----
+def naive_add(a, b):
+    r = a
+    for _ in range(b):
+        r += 1
+    return r
+
+
+# ---- dreaming grammar: random leaf mutants over (a, b) ----
+def mut_double_add(a, b):
+    r, addend = a, 1
+    base = 1
+    while addend <= b:
+        if b & addend:
+            r = r + base
+        base = base + base
+        addend <<= 1
+    return r
+
+
+def mut_chunk4(a, b):
+    r = a
+    while b >= 4:
+        r = r + 2
+        r = r + 2
+        b -= 4
+    while b > 0:
+        r += 1
+        b -= 1
+    return r
+
+
+def mut_hot_lookup(a, b):
+    table = {i: naive_add(0, i) for i in range(16)}
+    if b < 16:
+        return a + table[b]
+    r = a
+    while b >= 16:
+        r = r + 16
+        b -= 16
+    while b > 0:
+        r += 1
+        b -= 1
+    return r
+
+
+MUTANTS = {"double_add": mut_double_add, "chunk4": mut_chunk4, "hot_lookup": mut_hot_lookup}
+
+
+# ---- workload: the distribution is the only legitimate constraint ----
+def build_workload(n=4000):
+    rng = random.Random(20261116)
+    cases = []
+    for _ in range(n):
+        if rng.random() < 0.7:
+            cases.append((rng.randrange(0, 64), rng.randrange(0, 32)))
+        else:
+            cases.append((rng.randrange(0, 10**6), rng.randrange(0, 5000)))
+    return cases
+
+
+def run(fn, cases):
+    out = []
+    t0 = time.perf_counter()
+    for a, b in cases:
+        out.append(fn(a, b))
+    return out, (time.perf_counter() - t0)
+
+
+def log(event):
+    with LEDGER.open("a") as f:
+        f.write(json.dumps(event, sort_keys=True) + "\n")
+
+
+def replay_ledger():
+    events = [json.loads(l) for l in LEDGER.read_text().splitlines() if l.strip()]
+    verdicts = [e for e in events if e["kind"] == "verdict"]
+    last = {}
+    for e in verdicts:
+        last[e["mutant"]] = e
+    return {
+        "events": len(events),
+        "promoted": sorted(m for m, e in last.items() if e["promoted"]),
+        "rejected": sorted(m for m, e in last.items() if e["status"] == "rejected"),
+        "lossless": all(e.get("outputs_sha") for e in events if e["kind"] == "verdict"),
+    }
+
+
+def main():
+    cases = build_workload()
+    if not DISTRIBUTION_FILE.exists():
+        DISTRIBUTION_FILE.write_text(json.dumps({"n": len(cases), "seed": 20261116}))
+
+    base_out, base_t = run(naive_add, cases)
+
+    for name, fn in MUTANTS.items():
+        out, t = run(fn, cases)
+        identical = out == base_out
+        cheaper = t < base_t
+        promoted = identical and cheaper
+        log({
+            "kind": "verdict",
+            "mutant": name,
+            "outputs_sha": __import__("hashlib").sha256(
+                repr(out).encode()).hexdigest()[:12],
+            "oracle_sha": __import__("hashlib").sha256(
+                repr(base_out).encode()).hexdigest()[:12],
+            "identical": identical,
+            "t_mut_ms": round(t * 1000, 2),
+            "t_oracle_ms": round(base_t * 1000, 2),
+            "promoted": promoted,
+            "status": "promoted" if promoted else "rejected",
+        })
+
+    for e in (json.loads(l) for l in LEDGER.read_text().splitlines() if l.strip()):
+        if e["kind"] == "verdict":
+            print(f"{e['mutant']:12s} identical={e['identical']} "
+                  f"t={e['t_mut_ms']}ms vs oracle {e['t_oracle_ms']}ms "
+                  f"-> {e['status'].upper()}")
+    print("replay:", replay_ledger())
+
+
+if __name__ == "__main__":
+    main()
