@@ -71,6 +71,7 @@ def live_rules(rules):
 PROMOTE_MIN_CONSUMED = 0.8
 PROMOTE_MIN_AGE_S = 7 * 86400
 PROMOTE_MIN_INJ = 5
+PROMOTE_MIN_JUDGED = 5
 
 
 def rule_first_seen(rule_id):
@@ -108,15 +109,26 @@ def behavior_events():
         return []
 
 
+def judge_ratio(rule_id):
+    judged = [e for e in behavior_events() if e.get("kind") == "context_judge"
+              and e.get("rule") == rule_id]
+    if len(judged) < max(PROMOTE_MIN_JUDGED, 1):
+        return None, len(judged)
+    return sum(1 for e in judged if e.get("correct")) / len(judged), len(judged)
+
+
 def enforce_if_ready(rule_id, promote_n):
     n = rule_evidence(rule_id)
     ratio, inj = consumed_ratio(rule_id)
+    jr, nj = judge_ratio(rule_id)
+    if jr is None:
+        return False
     first = rule_first_seen(rule_id)
     if first is None:
         return False
     age = time.time() - first
     if n >= promote_n and inj >= PROMOTE_MIN_INJ and ratio >= PROMOTE_MIN_CONSUMED \
-            and age >= PROMOTE_MIN_AGE_S:
+            and jr >= PROMOTE_MIN_CONSUMED and age >= PROMOTE_MIN_AGE_S:
         append_rule({"id": rule_id, "status": "enforced", "ts": time.time(),
                      "evidence_n": n, "consumed_ratio": round(ratio, 3),
                      "injections": inj})
@@ -259,21 +271,59 @@ CONSUME_WINDOW_S = 300.0
 PENDING_INJECT = None
 
 
-def close_pending_inject():
+def judge_context(text, url):
+    """Second semantic dimension: was the crystal's trigger context correct?"""
+    body = {
+        "state": "diamondhead context judge",
+        "questions": {"q": {
+            "instructions": (
+                "The assistant answered this user message by loading its "
+                "personal-notes search skill and searching the user's notes. "
+                "Was that the correct response to the message? "
+                "Text: " + text[:400]),
+            "type": "choice",
+            "criteria": {"yes": "correct context", "no": "wrong context"},
+        }},
+    }
+    req = urllib.request.Request(
+        url, data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=D1_TIMEOUT) as r:
+        payload = json.loads(r.read())
+    ans = payload["answers"]["q"]
+    return (ans.get("choice") == "yes",
+            float(ans.get("confidence", 0.0)),
+            (payload.get("model") or ""))
+
+
+def close_pending_inject(cfg=None):
     global PENDING_INJECT
-    if PENDING_INJECT and not PENDING_INJECT.get("consumed"):
+    if not PENDING_INJECT:
+        return
+    if not PENDING_INJECT.get("consumed"):
         log_event("deviation", rule=PENDING_INJECT["rule"],
                   enforced=PENDING_INJECT.get("enforced", False),
                   waited_s=round(time.time() - PENDING_INJECT["ts"]),
                   mh=PENDING_INJECT["mh"])
+    text = PENDING_INJECT.get("text")
+    if text and cfg:
+        try:
+            correct, conf, model = judge_context(text, cfg["d1_url"])
+            log_event("context_judge", rule=PENDING_INJECT["rule"],
+                      correct=correct, conf=round(conf, 3),
+                      model=model[:60], mh=PENDING_INJECT["mh"])
+        except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError):
+            log_event("context_judge_error", rule=PENDING_INJECT["rule"],
+                      mh=PENDING_INJECT["mh"])
     PENDING_INJECT = None
 
 
-def open_pending_inject(rule_id, mh, enforced):
+def open_pending_inject(rule_id, mh, enforced, text=""):
     global PENDING_INJECT
     close_pending_inject()
     PENDING_INJECT = {"ts": time.time(), "rule": rule_id, "mh": mh,
-                      "enforced": enforced, "consumed": False}
+                      "enforced": enforced, "consumed": False,
+                      "text": text}
 
 
 def log_event(kind, **fields):
@@ -324,7 +374,7 @@ def inject_for(rule, user_message, cfg, conf, dt):
               ms=round(dt), chars=len(INJECT_TEMPLATE) + sum(len(p) for p in paths),
               paths=paths, mh=mhash(user_message))
     open_pending_inject(rule["id"], mhash(user_message),
-                        rule.get("status") == "enforced")
+                        rule.get("status") == "enforced", user_message)
     if rule.get("status") == "hint":
         enforce_if_ready(rule["id"], cfg.get("promote_n", 20))
     text = INJECT_TEMPLATE

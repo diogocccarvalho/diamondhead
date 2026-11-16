@@ -138,7 +138,8 @@ def main():
     with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
          mock.patch.object(core, "haystack_top", return_value=[]), \
          mock.patch.object(core, "PROMOTE_MIN_AGE_S", 0), \
-         mock.patch.object(core, "PROMOTE_MIN_INJ", 3):
+         mock.patch.object(core, "PROMOTE_MIN_INJ", 3), \
+         mock.patch.object(core, "PROMOTE_MIN_JUDGED", 0):
         core.choose("where is the VPN note", cfg2)
     ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
     check("promote event fired", any(e["kind"] == "promote" for e in ev))
@@ -184,6 +185,39 @@ def main():
           not any(e["kind"] == "deviation" for e in ev),
           json.dumps([e["kind"] for e in ev]))
 
+    # context judge (second semantic dimension)
+    core.RULES_FILE.unlink()
+    core.init()
+    core.PENDING_INJECT = None
+    core.BEHAVIOR_FILE.write_text("")
+    with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+         mock.patch.object(core, "haystack_top", return_value=[]), \
+         mock.patch.object(core, "judge_context", return_value=(True, 0.9, "d1-t")):
+        core.choose("where is the VPN note", cfg)
+        core.close_pending_inject(cfg)
+    ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
+    check("context_judge logged with verdict",
+          any(e["kind"] == "context_judge" and e.get("correct") is True for e in ev))
+    check("raw message text never in log",
+          not any("VPN note" in json.dumps(e) for e in ev))
+    # wrong-context judge blocks promotion
+    core.BEHAVIOR_FILE.write_text("")
+    core.RULES_FILE.unlink()
+    core.init()
+    for _ in range(6):
+        with mock.patch.object(core, "classify", return_value=(True, 0.95, "d1-t")), \
+             mock.patch.object(core, "haystack_top", return_value=[]), \
+             mock.patch.object(core, "judge_context", return_value=(False, 0.9, "d1-t")), \
+             mock.patch.object(core, "PROMOTE_MIN_AGE_S", 0):
+            core.choose("where is the VPN note", cfg)
+            core.observe_tool("skill_view", 5.0, "tk")
+            core.close_pending_inject(cfg)
+    ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()]
+    check("wrong-context judges logged",
+          sum(1 for e in ev if e["kind"] == "context_judge") >= 5)
+    check("wrong context blocks promotion",
+          not any(e["kind"] == "promote" for e in ev)
+          and core.live_rules(core.load_rules())[0]["status"] == "hint")
     # corrections ingest
     check("positive correction detected",
           core.note_correction("hey use notes-router for that") ==
