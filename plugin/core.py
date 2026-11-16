@@ -643,6 +643,7 @@ def close_pending_inject(cfg=None):
                   waited_s=round(time.time() - PENDING_INJECT["ts"]),
                   mh=PENDING_INJECT["mh"])
     text = PENDING_INJECT.get("text")
+    cfg = cfg or PENDING_INJECT.get("cfg")
     pend = dict(PENDING_INJECT)
     PENDING_INJECT = None
     if text and cfg:
@@ -667,12 +668,12 @@ def close_pending_inject(cfg=None):
 SYNC_JUDGE = False
 
 
-def open_pending_inject(rule_id, mh, enforced, text=""):
+def open_pending_inject(rule_id, mh, enforced, text="", cfg=None):
     global PENDING_INJECT
     close_pending_inject()
     PENDING_INJECT = {"ts": time.time(), "rule": rule_id, "mh": mh,
                       "enforced": enforced, "consumed": False,
-                      "text": text}
+                      "text": text, "cfg": cfg}
 
 
 def log_event(kind, **fields):
@@ -776,7 +777,8 @@ def inject_for(rule, user_message, cfg, conf, dt, history="", session_id=""):
               ms=round(dt), chars=len(template) + sum(len(p) for p in paths),
               paths=paths, mh=mhash(user_message))
     open_pending_inject(rule["id"], mhash(user_message),
-                        rule.get("status") == "enforced", user_message)
+                        rule.get("status") == "enforced", user_message,
+                        cfg=cfg)
     if rule.get("genome") and rule.get("status") in ("hint", "candidate"):
         PENDING_INJECT["genome"] = list(rule["genome"])
         PENDING_INJECT["task"] = None  # task id arrives with the first tool
