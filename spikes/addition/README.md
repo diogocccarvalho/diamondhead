@@ -50,3 +50,21 @@ promoted/rejected sets from the ledger alone.
   pass is proof; promoted-by-replay-but-failing-exhaustive genomes are
   overfit crystals. This carries straight into stage 2: crystals must prove
   on their claimed domain, not their training traffic.
+
+## B3 Results (while_chunk looping primitive)
+
+- New primitive: ['while_chunk', k] semantics: while b >= k: r += k; b -= k
+- Adds a bounded iteration model to the genome language for multi-iteration
+  accumulation without explicit control flow.
+- Latency champion (positive domain): full power-of-two cascade
+  [wc 512,256,128,64,32,16,8,4,2,1] — 10 ops vs double_and_add's 13 ops.
+  Fitness 0.001821 — beats double-and-add.
+- Space champion (positive domain): same cascade at 209 bytes vs d&d ~260 bytes.
+  **20% compression improvement.**
+- Negative domain (a in {0,5,-5}, b in -20..20):
+  31.25% of all GA genomes pass (20/64). Same 31.25% as pre-B3.
+  Champion remains while_chunk-based but composition shifts slightly.
+  Trade-off: negative gate doesn't improve results, just filters 69% out.
+- Random founders re-check (A6 follow-up): NO champion in 8 generations.
+  Zero survivors across all 8 gens. While_chunk does NOT create a gradient
+  from pure randomness — seeded founders remain required for progress.
