@@ -211,7 +211,7 @@ as dominance on that distribution, never in the abstract.
   is measured). The d1 conf wobbles ±0.2 on identical input; gate 0.80,
   per-crystal gates for supervised hints. Stage-2 issues (embeddings are a
   model, chars/4 vs D8) catalogued in docs/haystack-crystallization-map.md
-  — P3 concerns, not plugin blockers.
+  — P4 concerns, not plugin blockers.
 
 ## Prior art & credits
 
