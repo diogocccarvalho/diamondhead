@@ -33,6 +33,12 @@ def main():
     for e in ev:
         counts[e["kind"]] = counts.get(e["kind"], 0) + 1
     print("  event counts:", counts)
+    dev = counts.get("deviation", 0)
+    cons = counts.get("consumed", 0)
+    closed = dev + cons
+    if closed:
+        print(f"  obedience: {cons}/{closed} injections consumed, "
+              f"deviation rate {dev / closed:.0%}")
     if MARKER.exists():
         since = float(MARKER.read_text().strip())
         fresh = [e for e in ev if e["ts"] > since and e["kind"] in
