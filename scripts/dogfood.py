@@ -57,13 +57,14 @@ def main():
             rid = r["id"]
             ratio, inj = core.consumed_ratio(rid)
             ratio = min(1.0, ratio)
-            first = core.rule_first_seen(rid)
-            age_d = f"{(core.time.time() - first) / 86400:.1f}" if first else "0 (no ts)"
             ev_n = core.rule_evidence(rid) or r.get("evidence_n", 0)
+            verdict, llr, uses = core.sequential_verdict(rid, {})
+            gate = (f"SPRT: {uses}/{core.SEQ_BURN_IN}+ uses, llr {llr:+.2f} "
+                    f"(promote >={core.SEQ_A:+.2f}, demote <={core.SEQ_B:+.2f})"
+                    + (f" -> {verdict}" if verdict else ""))
             print(f"  {rid}: {r.get('status')} "
-                  f"(evidence {ev_n}/20, "
-                  f"injections {inj}/{core.PROMOTE_MIN_INJ}, "
-                  f"consumed {ratio:.0%} vs >=80%, age {age_d}d vs >=7d)")
+                  f"(evidence {ev_n}, injections {inj}, "
+                  f"consumed {ratio:.0%} | {gate})")
     ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()
           if l.strip()]
     counts = {}
