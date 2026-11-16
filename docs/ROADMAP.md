@@ -125,3 +125,13 @@ D2. Morning-brief/dogfood: report injections fired + consumed, never "it
   Dreaming therefore needs either informed seeds (prior art - what worked
   today) or a graded intermediate signal for SURVIVAL while promotion stays
   proof-gated. This tension is a stage-2 design problem, not a bug.
+
+## A4 verdict (2026-11-16): RESOLVED - 43x retracted, honest metric adopted
+
+tokens-per-answer (haystack): 113 inject + E[read] 2,652 = 2,765 tok
+(median read 993). Honest compression vs naive full-note re-read: ~1.9x
+(median 4.7x), not 43x. The old ratio compared the injection against the
+largest sampled winning file. Real saving = avoided SEARCH (wrong reads,
+re-derivation, user questions), which is unbounded and was never the
+denominator. Committed in haystack 1c095ce; token_metrics.py carries the
+correction. A4 closed.
