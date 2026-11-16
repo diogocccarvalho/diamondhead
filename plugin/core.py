@@ -253,6 +253,63 @@ def audit_contracts():
     return problems
 
 
+def nudge_check():
+    """Proactive gate surfacing: failing crystals write a daily-deduped line
+    to the open-loops file. Surfacing only - policy constants stay frozen."""
+    try:
+        import os
+        ol_path = Path.home() / ".hermes" / "open-loops.md"
+        today = time.strftime("%Y-%m-%d")
+        existing = ol_path.read_text() if ol_path.exists() else ""
+        ev = behavior_events()
+        lines = []
+        per_rule = {}
+        for e in ev:
+            rid = e.get("rule") or e.get("id")
+            if rid:
+                per_rule.setdefault(rid, []).append(e)
+        for st in live_rules(load_rules()):
+            if st.get("status") == "retracted":
+                continue
+            rid = st["id"]
+            evs = per_rule.get(rid, [])
+            inj = len([e for e in evs if e.get("kind") == "inject"])
+            miss = len([e for e in evs if e.get("kind") == "near_miss"])
+            cons = len([e for e in evs if e.get("kind") == "consumed"])
+            dev = len([e for e in evs if e.get("kind") == "deviation"])
+            gate = st.get("min_conf") or 0.80
+            blocked = 0
+            for e in evs:
+                if e.get("kind") != "chooser_no":
+                    continue
+                for r2, c in (e.get("confs") or {}).items():
+                    if r2 == rid and c >= gate and \
+                            (e.get("choices") or {}).get(rid) == "no":
+                        blocked += 1
+            unused = max(0, inj - cons)
+            tag = f"<!-- dh:{rid}:{today} -->"
+            if tag in existing:
+                continue
+            if miss >= 3 and inj < 5:
+                lines.append(f"{tag} diamondhead: {rid} struggling - {miss} near-misses, {inj} injections; dream it or sharpen trigger wording")
+            if blocked >= 3:
+                lines.append(f"{tag} diamondhead: {rid} ACTIVATION BLOCKED {blocked}x above gate - d1 wording or trigger mismatch (the v0.3 bug class)")
+            if st.get("status") == "candidate" and st.get("evidence_n", 0) >= 10 and inj == 0:
+                lines.append(f"{tag} diamondhead: {rid} mined but never fired (evidence {st['evidence_n']}) - check hint words against real traffic")
+            if unused >= 2 and cons < inj:
+                lines.append(f"{tag} diamondhead: {rid} OVER-ACTIVATING - fired {inj}x, consumed {cons}x; context cost with no payoff, narrow the trigger")
+            if dev > 0:
+                lines.append(f"{tag} diamondhead: {rid} deviated {dev}x - enforced crystal drifting")
+        if lines:
+            ol_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(ol_path, "a") as f:
+                f.write("\n" + today + "\n" + "\n".join(lines) + "\n")
+            log_event("nudge_written", n=len(lines))
+    except Exception:
+        import traceback
+        log_event("nudge_error", err=traceback.format_exc()[-120:])
+
+
 def bump_evidence(rule_id, n=1):
     rec = {"id": rule_id, "status": "evidence", "n": n, "ts": time.time()}
     with open(RULES_FILE, "a") as f:
@@ -540,7 +597,8 @@ def close_pending_inject(cfg=None):
     pend = dict(PENDING_INJECT)
     PENDING_INJECT = None
     if text and cfg:
-        # judge OFF the turn's critical path: runs concurrently with the turn
+        # judge OFF the turn's critical path: runs concurrently with the turn;
+        # SYNC_JUDGE runs it inline (tests - deterministic, no daemon races)
         def _judge():
             try:
                 correct, conf, model = judge_context(text, cfg["d1_url"])
@@ -551,7 +609,13 @@ def close_pending_inject(cfg=None):
                     KeyError, ValueError):
                 log_event("context_judge_error", rule=pend["rule"],
                           mh=pend["mh"])
-        threading.Thread(target=_judge, daemon=True).start()
+        if SYNC_JUDGE:
+            _judge()
+        else:
+            threading.Thread(target=_judge, daemon=True).start()
+
+
+SYNC_JUDGE = False
 
 
 def open_pending_inject(rule_id, mh, enforced, text=""):

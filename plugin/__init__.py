@@ -23,6 +23,7 @@ def _housekeep(cfg):
         sys.path.insert(0, str(scripts))
         import dream
         dream.dream()
+        core.nudge_check()
     except Exception:
         core.log_event("housekeep_error", err=traceback.format_exc()[-120:])
     finally:

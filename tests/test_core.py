@@ -36,9 +36,29 @@ def fake_urlopen(payload, fail=False):
     return mock.MagicMock(return_value=R())
 
 
+def reset_all():
+    """Hermetic start: wipe shared globals + BOTH files + reseed store."""
+    core.BEHAVIOR_FILE.write_text("")
+    if core.RULES_FILE.exists():
+        core.RULES_FILE.unlink()
+    core.init()
+    core.PENDING_INJECT = None
+    core.LAST_INJECT_TS = 0.0
+    core.SESSION_PATHS.clear()
+    core.TASK_SEQ.clear()
+    core.TASK_DIRECTIONS.clear()
+    core.SYNC_JUDGE = True
+
+
 def test_dream():
     sys.path.insert(0, str(Path(core.__file__).parent.parent / "scripts"))
     import dream  # noqa: F401
+    core.SYNC_JUDGE = True
+    if core.RULES_FILE.exists():
+        core.RULES_FILE.unlink()
+    core.init()
+    dream.LEDGER.parent.mkdir(parents=True, exist_ok=True)
+    dream.LEDGER.write_text("")
     # refusal: young family dreams nothing
     core.init()
     core.BEHAVIOR_FILE.write_text("")
@@ -139,6 +159,9 @@ def test_dimensions():
 
 
     # sequence fidelity: genome followed in order -> sequence_match logged
+    reset_all()
+    core.append_rule({"id": "auto-d0b974f8", "family": "code-change loop",
+                      "status": "candidate", "ts": core.time.time()})
     core.BEHAVIOR_FILE.write_text("")
     core.PENDING_INJECT = None
     core.SESSION_PATHS.clear()
@@ -189,12 +212,14 @@ def test_dimensions():
 
 def test_contracts():
     core.init()
+    reset_all()
     check("contract sha changes when operative fields change",
           core.contract_sha({"inject": "a"}) != core.contract_sha({"inject": "b"})
           and core.contract_sha({"inject": "a", "genome": ["x"]})
           != core.contract_sha({"inject": "a", "genome": ["y"]}))
 
     # bump -> rollback -> replay restores previous fields
+    reset_all()
     n = core.bump_version("notes-routing", {"inject": "v1 template",
                                             "genome": ["patch", "terminal"]})
     core.bump_version("notes-routing", {"inject": "v2 template",
@@ -214,6 +239,7 @@ def test_contracts():
 
 
 def main():
+    core.SYNC_JUDGE = True
     tmp = tempfile.mkdtemp(prefix="dh-test-")
     core.DATA = Path(tmp)
     core.RULES_FILE = core.DATA / "rules.jsonl"
@@ -369,6 +395,7 @@ def main():
     # context judge (second semantic dimension)
     core.RULES_FILE.unlink()
     core.init()
+    reset_all()
     core.PENDING_INJECT = None
     core.BEHAVIOR_FILE.write_text("")
     with mock.patch.object(core, "classify_multi", return_value={"notes-routing": (True, 0.95, "yes", "d1-t")}), \
