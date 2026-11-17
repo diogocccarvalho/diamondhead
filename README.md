@@ -187,15 +187,16 @@ as dominance on that distribution, never in the abstract.
 
 ## Status (2026-11-16): the loop runs end-to-end
 
-- **Plugin v0.3 — every crystal routes.** The chooser classifies one
-  single-question d1 call per candidate crystal, concurrently; candidates
-  mined from the behavior log fire as hints beside their parents; promotion
-  to `enforced` (0ms, bypasses the classifier) stays gate-earned:
-  evidence>=20, injections>=5, consumed>=80%, judge-correct>=80% over >=5,
-  age>=7d. **First live injection fired AND consumed on 2026-11-16**
-  (conf 0.94, notes->haystack); obedience instrument: 6/6 consumed, 0%
-  deviation. Acceptance criterion (learned the hard way): injections fired
-  AND consumed, never "it runs".
+- **Plugin v0.4 — every crystal routes, promotion is sequential.** The
+  chooser classifies one single-question d1 call per candidate crystal,
+  concurrently; candidates mined from the behavior log fire as hints beside
+  their parents. Promotion is a per-use SPRT gate (each injection = Bernoulli
+  trial: consumed AND judge-correct; promote on decisive precision,
+  futility-demote; burn-in 8; no wall-clock age). The creation/fitness laws
+  hold: fitness improves, never creates (creation = capture/mine/prior art).
+  **First live injection fired AND consumed on 2026-11-16**; obedience to
+  date: every injection consumed, 0% deviation. Acceptance criterion (learned
+  the hard way): injections fired AND consumed, never "it runs".
 - **Dynamic dimensions.** Per-crystal report in dogfood: conf mean/std
   (trigger stability), near_miss (d1 yes-under-gate wobble class),
   contention (multi-crystal arbitration pressure), context-judge score.
