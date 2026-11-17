@@ -100,3 +100,37 @@ Target: distro-cluster nickname failure (haystack A1), held-out hard-pairs gate.
   matched-budget control, length penalty.
 - Success = chain beats frozen normalize_query + hand rules on held-out pairs;
   else P3 collapses to inline fixes (documented kill test, ROADMAP §E).
+
+---
+
+# ADDENDUM — semantic-only redesign (2026-11-17, Diogo's principle)
+
+Principle: EVERYTHING is semantic, NOTHING is hand-authored. Hardcoded
+artifacts (thresholds, maps, filler lists) are not written by humans — they are
+DISCOVERED from data (vault co-occurrence, call logs, correction tables) and
+then CRYSTALLIZED via DiamondHead's per-use SPRT promotion. Full sweep:
+[research/p3-semantic-sweep.md](research/p3-semantic-sweep.md).
+
+Key findings:
+- ReFormeR mines compact reformulation pattern libraries from query pairs —
+  rule discovery from data, not authorship.
+- LOOComp/EnComp: leave-one-out token saliency = semantic filler detection
+  (delete token, measure answerability drop, auto-threshold via gap detection)
+  — replaces hand filler lists.
+- DC-PRF "Safety Anchor": residual interpolation toward the original query
+  bounds drift — the semantic version of the strength dial.
+- Conformal-RAG: split-conformal order-statistic thresholds for accept/reject
+  — threshold calibration from data, with coverage guarantees.
+- CoRe: two-family automated promotion gate (reward-like + stability) at
+  production scale — closest overlap with DiamondHead's crystallization angle;
+  cite and differentiate (they retrain models weekly; we promote individual
+  rules via per-use SPRT).
+- Oracle ceiling analysis (arXiv:2603.13301): selective rewriting maxes at
+  ~+3pp — expectation-setter for the whole experiment.
+
+Novelty gap (survives the second sweep too): no prior work combines
+data-discovered operations + embedding-space execution + per-operation SPRT
+crystallization + conformal threshold calibration + selective preserve
+decisions. CoRe promotes whole models; WeTune verifies via SMT; Google/Bing
+serve mined tables by lookup. Per-operation statistical promotion in IR
+rewriting: unclaimed — that is DiamondHead's angle.
