@@ -1,12 +1,21 @@
-# crystallization
+# DiamondHead
 
-Self-Crystallizing Architecture — plan of record. Pre-implementation; research
-repo only. Born 2026-11-06 from a chat brainstorm ("what if models stop
-re-thinking the same thoughts"). Companion to [haystack](https://github.com/diogocccarvalho/haystack),
+Self-Crystallizing Architecture — plan of record + working plugin. Born
+2026-11-06 from a chat brainstorm ("what if models stop re-thinking the same
+thoughts"). Companion to [haystack](https://github.com/diogocccarvalho/haystack),
 whose failure catalog ([docs/SHORTCOMINGS.md](https://github.com/diogocccarvalho/haystack/blob/main/docs/SHORTCOMINGS.md))
 supplied the design rules collected in [docs/design.md](docs/design.md).
 
-Status: **research idea, no code yet** (by design — see the project ladder).
+Status: **plugin built, live on my agent's traffic** — pre-LLM semantic
+function chooser (one single-question d1 call per crystal, concurrent),
+append-only rule store, behavior log (hashes only), SPRT sequential promotion
+gate (promote on decisive precision, futility-demote, burn-in 8), post-hoc
+context judge, proactive nudges, golden-fixture regression suite (73/73),
+genetic dream loop (mock of station 5 until sequence crystals fire), mined
+candidates fire as hints. The promotion gate itself is **built-but-unproven**:
+no crystal has yet survived SPRT to `enforced` on live traffic — that proof is
+accumulating, not assumed. Full current state in the Status section below and
+`scripts/dogfood.py`.
 
 ## The thesis (one paragraph)
 
