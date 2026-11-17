@@ -19,7 +19,9 @@ def _housekeep(cfg):
     if not _HOUSEKEEP_LOCK.acquire(blocking=False):
         return
     try:
-        scripts = Path(core.__file__).parent.parent / "scripts"
+        # resolve() is required: the plugin is symlink-installed, so __file__
+        # points under ~/.hermes/plugins and .parent.parent is not the repo.
+        scripts = Path(core.__file__).resolve().parent.parent / "scripts"
         sys.path.insert(0, str(scripts))
         import dream
         dream.dream()
