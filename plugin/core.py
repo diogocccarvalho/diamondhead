@@ -15,8 +15,8 @@ DATA = plugin_data_dir("diamondhead")
 RULES_FILE = DATA / "rules.jsonl"
 BEHAVIOR_FILE = DATA / "behavior.jsonl"
 
-D1_TIMEOUT = 8
-HAYSTACK_TIMEOUT = 8
+D1_TIMEOUT = 2.5
+HAYSTACK_TIMEOUT = 4
 INJECT_TEMPLATE = (
     "[diamondhead route] Load skill notes-router now and answer via it. "
     "Route: project/id question -> `python3 ~/.hermes/scripts/projects.py find <words>`; "
