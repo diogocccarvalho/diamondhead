@@ -192,6 +192,32 @@ def _oracle_naive_add(a, b):
     return r
 
 
+def spec_eval(genome, a, b):
+    """Direct transliteration of the Lean spec (spikes/lean
+    AdditionSemantics.evalGenome): state (r, b), one fold over the ops.
+    The conformance gate asserts interpret() == spec_eval() over the full
+    domain - the Lean proof covers the spec, this gate covers the link
+    from spec to the Python interpreter the runtime actually executes."""
+    r = a
+    for op in genome:
+        kind = op[0]
+        if kind == "add":                      # addNat
+            r += op[1]
+        elif kind == "addifbit":               # addIfBit bi va
+            if b & (1 << op[1]):
+                r += op[2]
+        elif kind == "chunk":                  # chunk sz
+            if b >= op[1]:
+                r += op[1]
+                b -= op[1]
+        elif kind == "while_chunk":            # whileChunk dv: one drain
+            r += b // op[1] * op[1]
+            b = b % op[1]
+        else:
+            raise ValueError(f"illegal op {kind}")
+    return r
+
+
 ORACLES = {
     "naive_add": {
         "fn": _oracle_naive_add,
@@ -257,10 +283,15 @@ def proof_graduate(rule_id, oracle_name, genome=None, b_max=None):
     for a, b in cases:
         try:
             got = interpret(genome, a, b)
+            got_spec = spec_eval(genome, a, b)
         except Exception as e:
             log_event("proof", verdict="fail", rule=rule_id,
                       replay_crash=[a, b], err=str(e)[:60])
             return False, {"reason": f"crash in replay at a={a} b={b}"}
+        if got != got_spec:
+            log_event("proof", verdict="fail", rule=rule_id,
+                      conformance_case=[a, b], n=n)
+            return False, {"reason": f"spec conformance at a={a} b={b}"}
         if got != expected(a, b):
             log_event("proof", verdict="fail", rule=rule_id,
                       fail_case=[a, b], n=n)
@@ -342,10 +373,15 @@ def proof_widen(rule_id, oracle_name, a_max=0, b_max=None):
     for a, b in cases:
         try:
             got = interpret(genome, a, b)
+            got_spec = spec_eval(genome, a, b)
         except Exception as e:
             log_event("generalize", verdict="fail", rule=rule_id,
                       crash=str(e)[:60], fail_case=[a, b])
             return False, {"reason": f"crash at a={a} b={b}"}
+        if got != got_spec:
+            log_event("generalize", verdict="fail", rule=rule_id,
+                      conformance_case=[a, b], n=n)
+            return False, {"reason": f"spec conformance at a={a} b={b}"}
         if got != expected(a, b):
             log_event("generalize", verdict="fail", rule=rule_id,
                       fail_case=[a, b], n=n)

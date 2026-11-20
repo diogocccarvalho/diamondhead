@@ -354,6 +354,27 @@ def test_proof_station():
     ok, detail = core.proof_graduate("add-champion", "nonexistent_oracle")
     check("unknown oracle refused", not ok)
 
+    # spec-conformance gate has teeth: a drifted interpreter must be caught
+    reset_all()
+    core.append_rule({"id": "add-cf", "status": "candidate",
+                      "genome": CHAMPION, "ts": core.time.time()})
+    orig_interpret = core.interpret
+    core.interpret = lambda genome, a, b: orig_interpret(genome, a, b) + 1
+    ok, detail = core.proof_graduate("add-cf", "naive_add", b_max=16)
+    core.interpret = orig_interpret
+    check("conformance gate catches interpreter drift",
+          not ok and "conformance" in detail["reason"], str(detail))
+
+    # cap divergence: a while_chunk-1-only genome exceeds the interpreter's
+    # 200-iteration cap on large b -> conformance refusal (documented
+    # spec-vs-cap boundary, Lean doc carries the same note)
+    reset_all()
+    core.append_rule({"id": "add-cap", "status": "candidate",
+                      "genome": [["while_chunk", 1]], "ts": core.time.time()})
+    ok, detail = core.proof_graduate("add-cap", "naive_add", b_max=8191)
+    check("interpreter cap divergence refuses graduation",
+          not ok and "conformance" in detail["reason"])
+
     # capture wiring: oracle-name validation
     sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
     import capture
