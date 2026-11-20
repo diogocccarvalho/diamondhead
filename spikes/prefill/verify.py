@@ -47,10 +47,12 @@ STOPWORDS = frozenset({
 
 
 def simple_stem(word):
+    """Approximate stemmer via suffix stripping (deterministic)."""
     w = word.lower()
+    # Strip common suffixes in priority order
     for suffix in ["tion", "ment", "ness", "able", "ible", "ally", "wise",
                    "ful", "ous", "ive", "less", "like", "hood", "ship",
-                   "ing", "ed", "ly", "er", "es", "s"]:
+                   "ence", "ance", "ing", "ing ", "ed", "ly", "er", "es", "s"]:
         if len(w) > 4 and w.endswith(suffix):
             return w[:-len(suffix)] or w
     return w
@@ -107,8 +109,9 @@ def verify_all(checksums=True, claims=True, stems=True):
         for chunk in chunks:
             text = chunk["text"]
             claim = chunk["first_line_claim"]
-            # Check claim appears within first ~200 chars of the normalized text
-            if claim in text[:min(500, len(text))]:
+            # Claim may be truncated with '...' — verify the non-truncated prefix exists
+            searchable = claim.removesuffix('...')
+            if searchable in text[:min(500, len(text))]:
                 claim_verified += 1
             else:
                 issues.append(f"Chunk {chunk['id']} claim not verifiable in text")
@@ -386,9 +389,8 @@ def main():
     parser.add_argument("--index", default=INDEX_PATH)
     args = parser.parse_args()
 
-    global CORPUS_PATH, INDEX_PATH
-    CORPUS_PATH = args.corpus
-    INDEX_PATH = args.index
+    corpus_path = args.corpus if args.corpus != CORPUS_PATH else CORPUS_PATH
+    index_path = args.index if args.index != INDEX_PATH else INDEX_PATH
 
     all_results = {}
 
@@ -398,7 +400,7 @@ def main():
         all_results["verify_pass"] = len(v_issues) == 0
 
     if args.mode in ("staleness", "all"):
-        st = detect_staleness()
+        st = detect_staleness(corpus_path=corpus_path, index_path=index_path)
         all_results["staleness"] = st
 
     if args.mode in ("measure", "all"):
