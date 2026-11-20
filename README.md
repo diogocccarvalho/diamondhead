@@ -46,8 +46,14 @@ traffic and crystallizes its repeated behavior.
   replay-proven, under a latency fitness axis; the space axis correctly
   refused. Same loop, different axis, opposite outcome.
 - Golden fixture (`tests/golden.json`) freezes working chooser behavior;
-  every change replays identical or is re-blessed with a reason. 73/73 tests.
-- The promotion gate is **built-but-unproven**: no crystal has yet survived
+  every change replays identical or is re-blessed with a reason. 82/82 tests.
+- Proof-tier graduation is wired: a crystal with an executable genome can be
+  promoted by PROOF — provenance audit, exhaustive byte-identical replay
+  against an independently re-derived oracle over a stated domain, off-domain
+  crash probe, min-of-3 cost gate vs the frozen incumbent. First proof-tier
+  crystal: the GA champion (while-chunk cascade), 8192/8192 cases,
+  0.0009ms vs 0.0346ms incumbent.
+- The SPRT promotion gate is **built-but-unproven**: no crystal has yet survived
   SPRT to `enforced` on live traffic — that proof is accumulating, not
   assumed. Current per-crystal state: `scripts/dogfood.py`.
 
