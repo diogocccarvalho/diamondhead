@@ -136,7 +136,7 @@ re-derivation, user questions), which is unbounded and was never the
 denominator. Committed in haystack 1c095ce; token_metrics.py carries the
 correction. A4 closed.
 
-## E. Query-formation pass (Diogo, 2026-11-16 - P3 pass, P2 prototype possible)
+## E. Query-formation pass (P3 pass, P2 prototype possible)
 
 'go for it' was not the best way to say 'keep working on task X'. The
 architecture needs a QUERY-FORMATION PASS: before any callee (haystack, d1,
@@ -164,8 +164,8 @@ any LLM), form the input that maximizes that callee's measured performance.
   haystack evals with the hard-pairs held-out gate (A1 discipline). First
   measured numbers would be the pass's proof of concept.
 
-## Decisions recorded (2026-11-16, Diogo):
-- A3 control split: SKIPPED by decision. Rationale: Diogo is the production
+## Decisions recorded (2026-11-16):
+- A3 control split: SKIPPED by decision. Rationale: the author is the production
   user; opensource makes the community the extended eval - issues found by
   others get fixed for everybody. No off-day degradation run.
 - Negative domain (A5): APPROVED as research - does extending the
@@ -176,7 +176,7 @@ any LLM), form the input that maximizes that callee's measured performance.
   crystal fires, the formation pass decides WHAT THE CALL SAYS - a pre-call
   layer, plugin-shaped by definition. P2 prototype targets the distro-
   cluster nickname-query failure from A1 (real bug, real eval).
-  CORRECTED (same day, Diogo): it is its OWN layer, consumed BY diamondhead
+  CORRECTED (same day): it is its OWN layer, consumed BY diamondhead
   AND haystack - a layer consumed by N callees belongs to neither. Shape:
   form(text, target, state) -> text; target = callee (retrieval vs
   classifier vs LLM), each callee has its own fitness; genome = rewrite-op
@@ -188,7 +188,7 @@ any LLM), form the input that maximizes that callee's measured performance.
   distro-cluster breakdown + rewrite-op prototype (haystack), C-sweeps
   (haystack) - new projects wait until these land.
 
-## Two creation/fitness laws (Diogo, 2026-11-16, phrasing per his correction)
+## Two creation/fitness laws (2026-11-16)
 
 - CRYSTALS ARE "I DID THIS X TIMES, THERE'S A PATTERN HERE, I THINK IT'S
   PROVABLE - THROW IT AT THE JUDGE" - NOT "I DID THIS X TIMES, LET'S

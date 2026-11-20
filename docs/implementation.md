@@ -11,7 +11,7 @@ developer-guide/middleware, user-guide/features/hooks, cost-control), read
 Auto skill discovery is relevance-driven and weak: measured ~1 skill load
 across ~190 messages on one install (hermes-agent cost-control doc). The
 routing today is a SOUL.md rule — still a soft prior the model can miss
-(exactly the failure Diogo names: "I'm always telling you to use the
+(the recurring failure: "I'm always telling you to use the
 notes-router"). A plugin hook is deterministic: code fires every turn.
 
 ## 1. The mechanism map (Hermes surfaces, most reliable first)
@@ -41,7 +41,7 @@ notes-router"). A plugin hook is deterministic: code fires every turn.
 ## 2. The crystallization loop (P2's actual design, haystack's pattern applied to behavior)
 
 Stage        | Mechanism                                    | Design rule
-observe      | post_tool_call + observer hooks → behavior log (which skill/tool fired per turn; misses = Diogo corrections) | D6: log granularity, not just names
+observe      | post_tool_call + observer hooks → behavior log (which skill/tool fired per turn; misses = user corrections) | D6: log granularity, not just names
 learn        | recurring pattern → candidate crystallization rule (when X, do Y) appended to the plugin's store        | D4: append-only, survives plugin updates (plugin_db()/plugin_data_dir())
 enforce      | the rule becomes code: pre_llm_call injection or tool_request rewrite — no model vote                    | D7: think-budget zero for the crystallized step
 validate     | a rule is only ENFORCED after it has fired and been validated N times; before that it is injected as a hint  | D1: user-taught > learned-by-use > model opinion

@@ -103,7 +103,7 @@ Target: distro-cluster nickname failure (haystack A1), held-out hard-pairs gate.
 
 ---
 
-# ADDENDUM — semantic-only redesign (2026-11-17, Diogo's principle)
+# ADDENDUM — semantic-only redesign (2026-11-17)
 
 Principle: EVERYTHING is semantic, NOTHING is hand-authored. Hardcoded
 artifacts (thresholds, maps, filler lists) are not written by humans — they are

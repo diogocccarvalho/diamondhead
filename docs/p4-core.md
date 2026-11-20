@@ -1,6 +1,6 @@
-# p4-core.md — the from-scratch core, as spoken (Diogo, 2026-11-13)
+# p4-core.md — the from-scratch core, — design sketch
 
-Sketch of the P4 architecture in Diogo's own framing, recorded verbatim in
+Sketch of the P4 architecture, recorded in
 structure, cleaned only for wording. Not implemented; this is the capture of
 the thinking, pre-autopsy (P2 still has to run).
 
@@ -56,7 +56,7 @@ turned into architecture: the router composes never-related pairings because
 memory supplies the parts and the link choice supplies the novelty. Blocks
 and memory are never creative; the *selection* is.
 
-## The interface block (Diogo, 2026-11-16)
+## The interface block 
 
 The core decomposes by role at the boundary, and TWO roles are orthogonal
 to any specific block:
@@ -99,7 +99,7 @@ Audit of the interface block (2026-11-16, four errors found and fixed):
 - I5 no implicit chaining: rewrites are single-boundary; a bad rewrite at
   boundary 1 must not silently mutate what boundary 2 receives.
 
-## The meta-block: improvement of improvement (Diogo, 2026-11-16)
+## The meta-block: improvement of improvement 
 
 'How do we maximize information usefulness across blocks - a semantic
 block that trains itself to pass information around.' Audited: real, but
@@ -125,7 +125,7 @@ the genome set. Five errors fixed for it to be architecture:
   the dream loop; runtime is always frozen; B5 contract versioning is the
   drift safety net.
 
-Sequencing decision (Diogo, 2026-11-16): the formation layer is ITS OWN
+Sequencing decision : the formation layer is ITS OWN
 project, not folded into current workstreams - do not build yet. Scope:
 implemented ONCE, deployed across all layers - as a plugin proof of
 concept (diamondhead + haystack boundaries) and natively in P4 per the
@@ -133,7 +133,7 @@ interface block above. Build trigger: after the finish-everything wave
 lands and the prototype nursery (haystack distro-cluster case) has
 measured numbers.
 
-## Truth maintenance: the ground-truth bit (Diogo, 2026-11-16)
+## Truth maintenance: the ground-truth bit 
 
 The architecture's stance today is "provable to work" (replay, gates). It
 has no "is it TRUE" verdict. Added: every stored claim carries a
@@ -149,7 +149,7 @@ This makes truth maintenance a first-class block: assertions enter with a
 bit, bits move only through evidence events, and the append-only log
 records every move.
 
-## The ceiling principle (Diogo, 2026-11-16)
+## The ceiling principle 
 
 The architecture has a performance ceiling: set by the quality of the
 crystallization of all involved parts, the dreaming budget, and the

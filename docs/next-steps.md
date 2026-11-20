@@ -8,7 +8,7 @@ No code here — each item is scoped enough to build directly.
 1. **Behavior log (observe) — `post_tool_call` hook + gateway `agent:step` hook.**
    Does: append one JSON line per turn/step to plugin_data_dir(): which skill/tool
    fired, session/platform, user-message hash, duration. Misses are captured when
-   Diogo corrects routing in a later message (tagged correction events).
+   The user corrects routing in a later message (tagged correction events).
    Serves: D4 (this log is the substrate; everything below rebuilds from it), D6
    (log at turn + tool + correction granularity, not just tool names).
    Implement: `ctx.register_hook("post_tool_call", ...)`; write to
@@ -61,7 +61,7 @@ No code here — each item is scoped enough to build directly.
    time-to-promotion and retraction rate per rule.
 
 5. **Corrections ingest (set-valued unlearn) — user message watcher.**
-   Does: explicit Diogo corrections ("use notes-router", "wrong skill") become
+   Does: explicit user corrections ("use notes-router", "wrong skill") become
    the highest-priority teaching signal, recorded at family granularity
    (D6), superseding conflicting learned rules immediately (D1).
    Implement: gateway/command hook or a lightweight check inside pre_llm_call
