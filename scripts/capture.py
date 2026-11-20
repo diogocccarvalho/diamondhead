@@ -24,26 +24,33 @@ import core  # noqa: E402
 PROOF_PATH = HERE.parent / "docs" / "captures.md"
 
 
-def capture(steps_text, claim, oracle_hint=""):
+def capture(steps_text, claim, oracle_hint="", oracle_name=""):
     steps = [s.strip() for s in steps_text.split(";") if s.strip()]
     genome = steps
     digest = hashlib.sha256(steps_text.encode("utf-8", "replace"))
     rid = "capture-" + digest.hexdigest()[:10]
+    known = oracle_name in core.ORACLES if oracle_name else False
     rec = {"id": rid, "family": "insight", "status": "candidate",
            "ts": time.time(), "genome": genome, "origin": "capture",
            "claim": (claim or "")[:300], "oracle_hint": oracle_hint[:200],
            "evidence_tier": "capture-only"}
+    if oracle_name:
+        rec["oracle_name"] = oracle_name
+        rec["evidence_tier"] = "oracle-registered" if known else "oracle-pending"
     core.append_rule(rec)
     core.log_event("capture", rule=rid, steps=len(genome),
-                   claim=(claim or "")[:80])
+                   claim=(claim or "")[:80], oracle=oracle_name or None)
     # proof obligation ledger: what would PROVE this crystal
     entry = {"id": rid, "ts": time.time(), "steps": genome,
              "claim": claim or "", "oracle_hint": oracle_hint or "",
-             "verdict": "unproven - no oracle yet"}
+             "oracle_name": oracle_name or None,
+             "verdict": ("oracle registered - graduation possible"
+                         if known else
+                         "unproven - register the oracle in core.ORACLES")}
     PROOF_PATH.parent.mkdir(parents=True, exist_ok=True)
     with PROOF_PATH.open("a") as f:
         f.write(json.dumps(entry) + "\n")
-    return rid, genome
+    return rid, genome, known
 
 
 def main():
@@ -53,11 +60,22 @@ def main():
     ap.add_argument("--claim", default="")
     ap.add_argument("--oracle", default="",
                     help="hint at what would prove it (oracle/eval)")
+    ap.add_argument("--oracle-name", default="",
+                    help="registered oracle in core.ORACLES; enables "
+                         "proof_graduate over its stated domain")
     a = ap.parse_args()
     core.init()
-    rid, genome = capture(a.steps, a.claim, a.oracle)
+    if a.oracle_name and a.oracle_name not in core.ORACLES:
+        print(f"oracle '{a.oracle_name}' not in core.ORACLES "
+              f"(known: {', '.join(core.ORACLES) or 'none'})")
+        print("capturing as oracle-pending; add the oracle spec to "
+              "core.ORACLES (fn + expected + domain + probe) then re-capture")
+    rid, genome, known = capture(a.steps, a.claim, a.oracle, a.oracle_name)
     print(f"captured {rid}: {len(genome)} steps -> candidate hint")
     print(f"proof obligation logged in {PROOF_PATH.name}")
+    if known:
+        print(f"oracle {a.oracle_name} registered - graduation possible: "
+              f"core.proof_graduate('{rid}', '{a.oracle_name}')")
     print("proof-tier graduation needs an oracle over the stated steps;")
 
 

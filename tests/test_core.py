@@ -44,6 +44,8 @@ def reset_all():
     core.init()
     core.PENDING_INJECT = None
     core.LAST_INJECT_TS = 0.0
+    core.CIRCUIT_ERR_STREAK = 0
+    core.CIRCUIT_OPEN_UNTIL = 0.0
     core.SESSION_PATHS.clear()
     core.TASK_SEQ.clear()
     core.TASK_DIRECTIONS.clear()
@@ -351,6 +353,54 @@ def test_proof_station():
     # unknown oracle refused
     ok, detail = core.proof_graduate("add-champion", "nonexistent_oracle")
     check("unknown oracle refused", not ok)
+
+    # capture wiring: oracle-name validation
+    sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+    import capture
+    reset_all()
+    rid, genome, known = capture.capture("step1; step2", "test claim",
+                                         oracle_name="naive_add")
+    check("capture with registered oracle tags oracle-registered",
+          rid.startswith("capture-") and known)
+    st = core.replay_rules()[rid]
+    check("capture stores oracle name", st.get("oracle_name") == "naive_add"
+          and st.get("evidence_tier") == "oracle-registered")
+    rid2, _, known2 = capture.capture("step1", "pending claim",
+                                      oracle_name="not_an_oracle")
+    check("capture with unknown oracle stays pending", not known2)
+    core.RULES_FILE.unlink()
+
+    # circuit breaker: 3 consecutive errors open, skip at 0ms, success closes
+    reset_all()
+    cfg = {"d1_url": "http://127.0.0.1:9/v1/systemone",
+           "haystack_url": "http://127.0.0.1:8083/query",
+           "min_confidence": 0.8, "inject_enabled": True, "promote_n": 20}
+    core.CIRCUIT_COOLDOWN_S = 60
+    for i in range(3):
+        core.choose("notes question about haystack please", cfg)
+    ev = core.behavior_events()
+    check("3 consecutive chooser errors open the circuit",
+          any(e["kind"] == "circuit_open" for e in ev))
+    core.choose("notes question about haystack please", cfg)
+    ev = core.behavior_events()
+    skip = [e for e in ev if e.get("kind") == "chooser_skip"
+            and e.get("circuit") == "open"]
+    check("open circuit skips at 0ms without calling d1",
+          skip and skip[-1].get("mh") is not None)
+    core.CIRCUIT_OPEN_UNTIL = 0.0  # half-open: one attempt allowed
+    _orig_classify_multi = core.classify_multi
+    core.classify_multi = lambda text, cand, url, mc: {
+        r["id"]: (False, 0.1, "no", "mock") for r in cand}
+    core.choose("notes question about haystack please", cfg)
+    check("successful classify closes the circuit",
+          core.CIRCUIT_ERR_STREAK == 0)
+    # one more failure after close must not re-open immediately
+    core.classify_multi = lambda text, cand, url, mc: (_ for _ in ()).throw(
+        ValueError("down"))
+    core.choose("notes question about haystack please", cfg)
+    check("single error after close does not re-open",
+          core.CIRCUIT_OPEN_UNTIL == 0.0)
+    core.classify_multi = _orig_classify_multi
 
 
 

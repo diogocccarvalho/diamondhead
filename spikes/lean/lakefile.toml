@@ -1,0 +1,7 @@
+name = "addition_proof"
+version = "0.1.0"
+leanVersion = "4.13.0"
+
+[[require]]
+name = "std"
+scope = "leanprover-community"

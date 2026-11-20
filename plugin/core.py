@@ -424,6 +424,13 @@ def replay_rules():
             cur["version"] = r.get("to_version")
         else:
             cur = state.setdefault(rid, {"evidence_n": 0})
+            if "fields_copied" not in cur:
+                cur.update({k: r[k] for k in CONTRACT_FIELDS if k in r})
+                for k in ("family", "origin", "claim", "oracle_hint",
+                          "oracle_name", "evidence_tier"):
+                    if k in r:
+                        cur[k] = r[k]
+                cur["fields_copied"] = True
             cur["status"] = r.get("status", cur.get("status", "hint"))
     return state
 
@@ -721,6 +728,12 @@ def haystack_top(text, url, k=3):
 
 
 LAST_INJECT_TS = 0.0
+# chooser circuit breaker: consecutive d1 failures open a cooldown; one
+# success closes it. Fail-open: open circuit = no injection, 0ms.
+CIRCUIT_THRESHOLD = 3
+CIRCUIT_COOLDOWN_S = 120
+CIRCUIT_ERR_STREAK = 0
+CIRCUIT_OPEN_UNTIL = 0.0
 CONSUME_WINDOW_S = 300.0
 PENDING_INJECT = None
 
@@ -866,13 +879,25 @@ def choose(user_message, cfg, history="", session_id=""):
                   proof=rule.get("status") == "proven", mh=mhash(user_message))
         return inject_for(rule, user_message, cfg, conf=1.0, dt=0.0,
                           history=history)
+    global CIRCUIT_OPEN_UNTIL
+    if time.time() < CIRCUIT_OPEN_UNTIL:
+        log_event("chooser_skip", rules=[r["id"] for r in cand],
+                  circuit="open", mh=mhash(user_message))
+        return None, 0.0, 0.0
     t0 = time.monotonic()
     try:
         results = classify_multi(user_message, cand, cfg["d1_url"],
                                  cfg["min_confidence"])
     except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as e:
+        global CIRCUIT_ERR_STREAK
+        CIRCUIT_ERR_STREAK += 1
+        if CIRCUIT_ERR_STREAK >= CIRCUIT_THRESHOLD:
+            CIRCUIT_OPEN_UNTIL = time.time() + CIRCUIT_COOLDOWN_S
+            log_event("circuit_open", streak=CIRCUIT_ERR_STREAK,
+                      cooldown_s=CIRCUIT_COOLDOWN_S, mh=mhash(user_message))
         log_event("chooser_error", err=str(e)[:120], mh=mhash(user_message))
         return None, 0.0, (time.monotonic() - t0) * 1000
+    CIRCUIT_ERR_STREAK = 0
     dt = (time.monotonic() - t0) * 1000
     hits = [(r, results[r["id"]]) for r in cand if results[r["id"]][0]]
     for r in cand:
