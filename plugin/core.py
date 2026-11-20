@@ -374,6 +374,65 @@ def proof_widen(rule_id, oracle_name, a_max=0, b_max=None):
     return True, {"n_cases": n, "domain": rec["domain"]}
 
 
+def op_histogram(genome):
+    h = {}
+    for op in genome:
+        h[op[0]] = h.get(op[0], 0) + 1
+    n = max(sum(h.values()), 1)
+    return {k: v / n for k, v in h.items()}
+
+
+def histogram_sim(g1, g2):
+    h1, h2 = op_histogram(g1), op_histogram(g2)
+    keys = set(h1) | set(h2)
+    dot = sum(h1.get(k, 0) * h2.get(k, 0) for k in keys)
+    n1 = math.sqrt(sum(v * v for v in h1.values()))
+    n2 = math.sqrt(sum(v * v for v in h2.values()))
+    return dot / (n1 * n2) if n1 and n2 else 0.0
+
+
+def behavioral_agreement(rule_a, rule_b, oracle_name, samples=64):
+    """Run both genomes on sampled points of the SHARED domain; identical
+    outputs = candidate same-abstract-behavior. Deterministic judge; the
+    caller proposes (supersede or widen), the gates dispose."""
+    spec = ORACLES.get(oracle_name)
+    if not spec:
+        return None, "unknown oracle"
+    rng = random.Random(23)
+    pts = [(rng.randint(0, 10), rng.randint(0, 255)) for _ in range(samples)]
+    for a, b in pts:
+        try:
+            ra, rb = interpret(rule_a, a, b), interpret(rule_b, a, b)
+        except Exception:
+            return None, f"genome crash at a={a} b={b}"
+        if ra != rb:
+            return False, f"disagree at a={a} b={b}"
+    return True, f"identical on {samples} sampled points"
+
+
+def propose_generalization(rule_a_id, rule_b_id, oracle_name,
+                           theta=0.9, samples=64):
+    """Adjacency proposal: histogram similarity nominates, behavioral
+    agreement confirms, gates dispose. Returns (verdict, detail) where
+    verdict in {identical, adjacent, distinct, refused}."""
+    live = {r["id"]: r for r in live_rules(load_rules())}
+    ra, rb = live.get(rule_a_id), live.get(rule_b_id)
+    if not ra or not rb:
+        return "refused", "unknown rule id"
+    ga, gb = ra.get("genome"), rb.get("genome")
+    if not ga or not gb:
+        return "refused", "missing genome"
+    sim = histogram_sim(ga, gb)
+    if sim < theta:
+        return "distinct", {"histogram_sim": round(sim, 3)}
+    agree, why = behavioral_agreement(ga, gb, oracle_name, samples)
+    if agree is None:
+        return "refused", why
+    if agree:
+        return "identical", {"histogram_sim": round(sim, 3), "evidence": why}
+    return "adjacent", {"histogram_sim": round(sim, 3), "evidence": why}
+
+
 def append_rule(rec):
     with open(RULES_FILE, "a") as f:
         f.write(json.dumps(rec) + "\n")

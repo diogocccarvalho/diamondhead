@@ -10,3 +10,7 @@
 {"id": "capture-97f9e3b0ab", "ts": 1795186853.3872733, "steps": ["step1"], "claim": "pending claim", "oracle_hint": "", "oracle_name": "not_an_oracle", "verdict": "unproven - register the oracle in core.ORACLES"}
 {"id": "capture-d3746ef525", "ts": 1795186948.2367618, "steps": ["step1", "step2"], "claim": "test claim", "oracle_hint": "", "oracle_name": "naive_add", "verdict": "oracle registered - graduation possible"}
 {"id": "capture-97f9e3b0ab", "ts": 1795186948.2368937, "steps": ["step1"], "claim": "pending claim", "oracle_hint": "", "oracle_name": "not_an_oracle", "verdict": "unproven - register the oracle in core.ORACLES"}
+{"id": "capture-d3746ef525", "ts": 1795187025.738053, "steps": ["step1", "step2"], "claim": "test claim", "oracle_hint": "", "oracle_name": "naive_add", "verdict": "oracle registered - graduation possible"}
+{"id": "capture-97f9e3b0ab", "ts": 1795187025.7381961, "steps": ["step1"], "claim": "pending claim", "oracle_hint": "", "oracle_name": "not_an_oracle", "verdict": "unproven - register the oracle in core.ORACLES"}
+{"id": "capture-d3746ef525", "ts": 1795187091.7328527, "steps": ["step1", "step2"], "claim": "test claim", "oracle_hint": "", "oracle_name": "naive_add", "verdict": "oracle registered - graduation possible"}
+{"id": "capture-97f9e3b0ab", "ts": 1795187091.732979, "steps": ["step1"], "claim": "pending claim", "oracle_hint": "", "oracle_name": "not_an_oracle", "verdict": "unproven - register the oracle in core.ORACLES"}

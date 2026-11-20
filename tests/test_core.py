@@ -453,6 +453,42 @@ def test_proof_station():
     check("widening refuses unproven crystal",
           not ok and "not proven" in detail["reason"])
 
+    # adjacency proposal: identical behavior + high histogram sim
+    reset_all()
+    core.append_rule({"id": "c-a", "status": "proven", "genome": CHAMPION,
+                      "ts": core.time.time()})
+    core.append_rule({"id": "c-b", "status": "proven",
+                      "genome": CHAMPION[:-1] + [["while_chunk", 1]],
+                      "ts": core.time.time()})
+    v, d = core.propose_generalization("c-a", "c-b", "naive_add")
+    check("behaviorally identical crystals nominate 'identical'",
+          v == "identical" and d["histogram_sim"] == 1.0, str(d))
+
+    # distinct behavior + same op mix: nomination must be rejected by behavior
+    reset_all()
+    core.append_rule({"id": "c-a", "status": "proven", "genome": CHAMPION,
+                      "ts": core.time.time()})
+    core.append_rule({"id": "c-c", "status": "proven",
+                      "genome": [["while_chunk", 1]], "ts": core.time.time()})
+    v, d = core.propose_generalization("c-a", "c-c", "naive_add", theta=0.9)
+    check("same op-mix but different behavior is not 'identical'",
+          v == "adjacent" or v == "distinct", str(d))
+
+    # low histogram sim = distinct without sampling
+    reset_all()
+    core.append_rule({"id": "c-a", "status": "proven", "genome": CHAMPION,
+                      "ts": core.time.time()})
+    core.append_rule({"id": "c-d", "status": "proven",
+                      "genome": [["add", 7]], "ts": core.time.time()})
+    v, d = core.propose_generalization("c-a", "c-d", "naive_add")
+    check("dissimilar op-mix short-circuits to distinct",
+          v == "distinct" and d["histogram_sim"] < 0.9)
+
+    # missing genome / unknown rules refuse cleanly
+    reset_all()
+    v, d = core.propose_generalization("ghost-a", "ghost-b", "naive_add")
+    check("unknown rule ids refuse", v == "refused")
+
 
 
 def main():
