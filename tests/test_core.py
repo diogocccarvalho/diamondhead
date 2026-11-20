@@ -278,6 +278,82 @@ def test_sequential_gate():
           ok and st.get("status") == "enforced" and st.get("contract_sha"))
 
 
+CHAMPION = [["while_chunk", k] for k in (512, 256, 128, 64, 32, 16, 8, 4, 2, 1)]
+
+
+def test_proof_station():
+    reset_all()
+    rid = "add-champion"
+    core.append_rule({"id": rid, "status": "candidate", "family": "addition",
+                      "genome": CHAMPION, "ts": core.time.time()})
+    ok, detail = core.proof_graduate(rid, "naive_add", b_max=255)
+    check("proof graduation passes on champion genome",
+          ok and detail["n_cases"] == 256,
+          str(detail) if not ok else "")
+    st = core.replay_rules()[rid]
+    check("proven record lands in replay state", st.get("status") == "proven")
+    live = [r for r in core.live_rules(core.load_rules())
+            if r.get("id") == rid][0]
+    check("live path agrees with replay on proven status",
+          live.get("status") == "proven")
+
+    # proven rule fires O(1), proof-tagged
+    reset_all()
+    core.append_rule({"id": rid, "status": "proven", "family": "addition",
+                      "genome": CHAMPION, "ts": core.time.time()})
+    cfg = {"d1_url": "http://127.0.0.1:8080/v1/systemone",
+           "haystack_url": "http://127.0.0.1:8083/query",
+           "min_confidence": 0.8, "inject_enabled": True, "promote_n": 20}
+    out = core.choose("notes question about haystack please", cfg)
+    ev = [e for e in core.behavior_events() if e.get("kind") == "enforced_fire"]
+    check("proven crystal fires O(1) with proof tag",
+          out[0] is not None and ev and ev[-1].get("proof") is True)
+
+    # broken genome fails replay
+    reset_all()
+    core.append_rule({"id": "add-broken", "status": "candidate",
+                      "genome": CHAMPION[:-1], "ts": core.time.time()})
+    ok, detail = core.proof_graduate("add-broken", "naive_add", b_max=16)
+    check("replay mismatch blocks graduation",
+          not ok and "mismatch" in detail["reason"])
+
+    # oracle-reference genome fails provenance audit
+    reset_all()
+    core.append_rule({"id": "add-cheat", "status": "candidate",
+                      "genome": CHAMPION + [["naive_add", 1]],
+                      "ts": core.time.time()})
+    ok, detail = core.proof_graduate("add-cheat", "naive_add", b_max=8)
+    check("provenance audit blocks oracle-referencing genome",
+          not ok and "audit" in detail["reason"])
+
+    # vacuous oracle (constant truth) is refused before any verdict
+    reset_all()
+    core.ORACLES["const_add"] = {"fn": core._oracle_naive_add,
+                                 "expected": lambda a, b: 0,
+                                 "domain": lambda: ((0, b) for b in range(3)),
+                                 "probe": [(0, -1)],
+                                 "domain_text": "a=0, b in [0,2]"}
+    core.append_rule({"id": "add-const", "status": "candidate",
+                      "genome": CHAMPION, "ts": core.time.time()})
+    ok, detail = core.proof_graduate("add-const", "const_add")
+    check("vacuous oracle refused", not ok and "vacuous" in detail["reason"])
+    del core.ORACLES["const_add"]
+
+    # off-domain crash probe blocks graduation
+    reset_all()
+    core.append_rule({"id": "add-crash", "status": "candidate",
+                      "genome": CHAMPION + [["badop", 1]],
+                      "ts": core.time.time()})
+    ok, detail = core.proof_graduate("add-crash", "naive_add", b_max=4)
+    check("off-domain crash blocks graduation",
+          not ok and "crash" in detail["reason"])
+
+    # unknown oracle refused
+    ok, detail = core.proof_graduate("add-champion", "nonexistent_oracle")
+    check("unknown oracle refused", not ok)
+
+
+
 def main():
     core.SYNC_JUDGE = True
     tmp = tempfile.mkdtemp(prefix="dh-test-")
@@ -529,6 +605,8 @@ def main():
     test_task_direction()
     test_contracts()
     test_sequential_gate()
+    test_proof_station()
+
 
     # golden replay: what works today must not silently change
     import subprocess

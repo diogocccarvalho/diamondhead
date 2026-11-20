@@ -1,6 +1,8 @@
 import hashlib
+import inspect
 import json
 import math
+import random
 import re
 import threading
 import time
@@ -68,6 +70,8 @@ def live_rules(rules):
             out.append(dict(r))
         elif r.get("status") == "enforced":
             cur["status"] = "enforced"
+        elif r.get("status") == "proven":
+            cur["status"] = "proven"
     return out
 
 
@@ -145,6 +149,155 @@ def enforce_if_ready(rule_id, promote_n, cfg=None):
                   seq_uses=uses)
         return False
     return False
+
+
+# ---- proof station: proof-tier graduation ----
+# oracle = frozen incumbent (cost gate); expected = independent truth fn.
+# Proof = byte-identical replay over the STATED domain; off-domain wrong
+# answers are not failures, off-domain crashes are.
+MAX_WHILE_ITERATIONS = 200
+PROOF_DOMAIN_CAP = 100_000
+PROOF_COST_SAMPLE = 400
+
+
+def interpret(genome, a, b):
+    r = a
+    for op in genome:
+        kind = op[0]
+        if kind == "add":
+            r += op[1]
+        elif kind == "addifbit":
+            if b & (1 << op[1]):
+                r += op[2]
+        elif kind == "chunk":
+            if b >= op[1]:
+                r += op[1]
+                b -= op[1]
+        elif kind == "while_chunk":
+            k = op[1]
+            it = 0
+            while b >= k and it < MAX_WHILE_ITERATIONS:
+                r += k
+                b -= k
+                it += 1
+        else:
+            raise ValueError(f"illegal op {kind}")
+    return r
+
+
+def _oracle_naive_add(a, b):
+    r = a
+    for _ in range(b):
+        r += 1
+    return r
+
+
+ORACLES = {
+    "naive_add": {
+        "fn": _oracle_naive_add,
+        "expected": lambda a, b: a + b,
+        "domain": lambda: ((0, b) for b in range(0, 8192)),
+        "probe": [(0, -1), (0, -3), (7, -8)],
+        "domain_text": "a=0, b in [0, 8191]",
+    },
+}
+
+ORACLE_REF_NAMES = ("naive_add", "oracle", "ORACLE")
+
+
+def proof_audit(genome):
+    text = json.dumps(genome)
+    refs = [n for n in ORACLE_REF_NAMES if n in text]
+    return not refs, refs
+
+
+def _min3(fn, cases):
+    best = math.inf
+    for _ in range(3):
+        t = time.perf_counter()
+        for a, b in cases:
+            fn(a, b)
+        dt = (time.perf_counter() - t) / max(len(cases), 1)
+        best = min(best, dt)
+    return best
+
+
+def _latest_rule(rule_id):
+    cur = None
+    for r in load_rules():
+        if r.get("id") == rule_id:
+            cur = r
+    return cur or {}
+
+
+def proof_graduate(rule_id, oracle_name, genome=None, b_max=None):
+    """Replay gates over the stated domain; appends a proven record on pass.
+    Returns (ok, detail) - flat contract, detail is a dict."""
+    spec = ORACLES.get(oracle_name)
+    if not spec:
+        return False, {"reason": f"unknown oracle {oracle_name}"}
+    rule = _latest_rule(rule_id)
+    genome = genome or rule.get("genome")
+    if not genome:
+        return False, {"reason": "no genome"}
+    clean, refs = proof_audit(genome)
+    if not clean:
+        log_event("proof", verdict="fail", rule=rule_id, oracle_refs=refs)
+        return False, {"reason": "provenance audit: oracle refs", "refs": refs}
+    hi = b_max if b_max is not None else 8191
+    oracle_fn, expected = spec["fn"], spec["expected"]
+    cases = [(a, b) for a, b in spec["domain"]() if b <= hi]
+    if not cases:
+        return False, {"reason": "vacuous oracle domain"}
+    probe_vals = {expected(*c) for c in cases[:5]}
+    if len(probe_vals) < 2:
+        log_event("proof", verdict="fail", rule=rule_id, reason="vacuous oracle")
+        return False, {"reason": "vacuous oracle: constant over domain"}
+    n = 0
+    for a, b in cases:
+        try:
+            got = interpret(genome, a, b)
+        except Exception as e:
+            log_event("proof", verdict="fail", rule=rule_id,
+                      replay_crash=[a, b], err=str(e)[:60])
+            return False, {"reason": f"crash in replay at a={a} b={b}"}
+        if got != expected(a, b):
+            log_event("proof", verdict="fail", rule=rule_id,
+                      fail_case=[a, b], n=n)
+            return False, {"reason": f"replay mismatch at a={a} b={b}"}
+        n += 1
+    for a, b in spec["probe"]:
+        try:
+            interpret(genome, a, b)
+        except Exception as e:
+            log_event("proof", verdict="fail", rule=rule_id,
+                      probe_crash=str(e)[:60])
+            return False, {"reason": f"crash on off-domain probe {a},{b}"}
+    rng = random.Random(7)
+    sample = [(rng.randrange(0, 13), rng.randrange(0, 5001))
+              for _ in range(PROOF_COST_SAMPLE)]
+    t_crystal = _min3(lambda a, b: interpret(genome, a, b), sample)
+    t_oracle = _min3(oracle_fn, sample)
+    cheaper = t_crystal <= t_oracle
+    rec = {"id": rule_id, "status": "proven", "oracle": oracle_name,
+           "oracle_sha": hashlib.sha256(
+               inspect.getsource(oracle_fn).encode()).hexdigest()[:12],
+           "genome_sha": hashlib.sha256(
+               json.dumps(genome, sort_keys=True).encode()).hexdigest()[:12],
+           "domain": spec["domain_text"], "n_cases": n,
+           "cost_ms_crystal": round(t_crystal * 1000, 4),
+           "cost_ms_oracle": round(t_oracle * 1000, 4),
+           "cheaper": cheaper, "ts": time.time()}
+    append_rule(rec)
+    bump_version(rule_id, {**{k: rule.get(k) for k in CONTRACT_FIELDS},
+                           "genome": genome})
+    log_event("proof", verdict="promote", rule=rule_id, n_cases=n,
+              cheaper=cheaper, cost_ms_crystal=rec["cost_ms_crystal"],
+              cost_ms_oracle=rec["cost_ms_oracle"],
+              genome_sha=rec["genome_sha"], oracle_sha=rec["oracle_sha"])
+    return True, {"n_cases": n, "cheaper": cheaper,
+                  "cost_ms_crystal": rec["cost_ms_crystal"],
+                  "cost_ms_oracle": rec["cost_ms_oracle"]}
 
 
 def append_rule(rec):
@@ -706,10 +859,11 @@ def choose(user_message, cfg, history="", session_id=""):
         log_event("chooser_skip", rules=skipped, mh=mhash(user_message))
     if not cand:
         return None, 0.0, 0.0
-    enforced = [r for r in cand if r.get("status") == "enforced"]
+    enforced = [r for r in cand if r.get("status") in ("enforced", "proven")]
     if enforced:
         rule = enforced[0]
-        log_event("enforced_fire", rule=rule["id"], mh=mhash(user_message))
+        log_event("enforced_fire", rule=rule["id"],
+                  proof=rule.get("status") == "proven", mh=mhash(user_message))
         return inject_for(rule, user_message, cfg, conf=1.0, dt=0.0,
                           history=history)
     t0 = time.monotonic()

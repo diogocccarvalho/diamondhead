@@ -53,7 +53,7 @@ def main():
     print("== crystallization state ==")
     for r in rules:
         if r.get("status") in ("candidate", "validated", "retracted", "hint",
-                               "enforced"):
+                               "enforced", "proven"):
             rid = r["id"]
             ratio, inj = core.consumed_ratio(rid)
             ratio = min(1.0, ratio)
@@ -62,9 +62,17 @@ def main():
             gate = (f"SPRT: {uses}/{core.SEQ_BURN_IN}+ uses, llr {llr:+.2f} "
                     f"(promote >={core.SEQ_A:+.2f}, demote <={core.SEQ_B:+.2f})"
                     + (f" -> {verdict}" if verdict else ""))
+            tier = ""
+            if r.get("status") == "proven":
+                pr = max((x for x in core.load_rules()
+                          if x.get("id") == rid and x.get("status") == "proven"),
+                         key=lambda x: x.get("ts", 0))
+                tier = (f" | PROOF: {pr.get('domain')} over {pr.get('n_cases')} "
+                        f"cases, {pr.get('cost_ms_crystal')}ms vs oracle "
+                        f"{pr.get('cost_ms_oracle')}ms")
             print(f"  {rid}: {r.get('status')} "
                   f"(evidence {ev_n}, injections {inj}, "
-                  f"consumed {ratio:.0%} | {gate})")
+                  f"consumed {ratio:.0%} | {gate}{tier})")
     ev = [json.loads(l) for l in core.BEHAVIOR_FILE.read_text().splitlines()
           if l.strip()]
     counts = {}
