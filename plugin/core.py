@@ -541,9 +541,16 @@ def replay_rules():
             continue
         if r.get("status") == "evidence":
             st = state.setdefault(rid, {"evidence_n": 0, "status": "hint"})
-            st["evidence_n"] += r.get("n", 1)
+            # retraction-scoped: evidence after a retraction, before a
+            # re-introduction record, is dead - mirrors rule_evidence()
+            if not st.get("dead"):
+                st["evidence_n"] += r.get("n", 1)
         elif r.get("status") == "retracted":
-            state[rid] = {"status": "retracted", "evidence_n": 0}
+            state[rid] = {"status": "retracted", "evidence_n": 0, "dead": True}
+        elif r.get("status") in ("hint", "candidate", "enforced", "proven"):
+            cur = state.setdefault(rid, {"evidence_n": 0})
+            cur.pop("dead", None)
+            cur["status"] = r.get("status", cur.get("status", "hint"))
         elif r.get("status") == "version":
             versions[rid] = dict(r)
             cur = state.setdefault(rid, {"evidence_n": 0})
@@ -660,16 +667,23 @@ def bump_evidence(rule_id, n=1):
 
 def rule_evidence(rule_id):
     n = 0
+    dead = False
     if RULES_FILE.exists():
         for line in RULES_FILE.read_text().splitlines():
             try:
                 r = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if r.get("id") == rule_id and r.get("status") == "evidence":
-                n += r.get("n", 1)
-            if r.get("id") == rule_id and r.get("status") == "retracted":
+            if r.get("id") != rule_id:
+                continue
+            st = r.get("status")
+            if st == "retracted":
                 n = 0
+                dead = True
+            elif st in ("hint", "candidate", "enforced", "proven"):
+                dead = False
+            elif st == "evidence" and not dead:
+                n += r.get("n", 1)
     return n
 
 

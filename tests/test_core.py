@@ -520,6 +520,19 @@ def main():
         f.write(json.dumps({"id": "notes-routing", "status": "retracted"}) + "\n")
     check("retraction resets evidence", core.rule_evidence("notes-routing") == 0)
     check("retracted rule not live", not core.live_rules(core.load_rules()))
+    # post-retraction evidence stays dead until a re-introduction record
+    core.bump_evidence("notes-routing")
+    check("evidence after retraction is dead",
+          core.rule_evidence("notes-routing") == 0)
+    st = core.replay_rules()["notes-routing"]
+    check("replay agrees: post-retraction evidence dead",
+          st.get("evidence_n") == 0)
+    core.append_rule({"id": "notes-routing", "status": "hint",
+                      "ts": core.time.time()})
+    core.bump_evidence("notes-routing")
+    check("re-introduction restarts evidence counting",
+          core.rule_evidence("notes-routing") == 1
+          and core.replay_rules()["notes-routing"].get("evidence_n") == 1)
     core.RULES_FILE.unlink()
     core.init()
     check("re-init reseeds after wipe", core.load_rules()[0]["id"] == "notes-routing")
