@@ -38,6 +38,26 @@ traffic and crystallizes its repeated behavior.
   promotion gate decides.
 - **Behavior log** — message hashes only, never raw text.
 
+## How it works (one example)
+
+Say the agent has crystallized arithmetic from the addition spike. A message
+arrives: "what's 1 + 1 + 5 - 10?" Before the LLM ever sees it, the pre-LLM
+hook matches the message against the rule store: the O(1) hint prefilter
+hits, and a proven crystal fires with **zero classifier calls and zero
+thinking**. The hook prepends its context to the prompt, so what the model
+actually receives is:
+
+    [diamondhead route] arithmetic is crystallized: 1+1=2, +5=7, -10=-3.
+    Answer from the crystal: -3. The user's prompt: "what's 1 + 1 + 5 - 10?"
+
+The derivation the model used to re-think every turn is now a compiled
+component: each sub-answer was proven once (byte-identical replay against an
+independent oracle over a stated domain), and it fires on trigger instead of
+being re-derived. Every time a new proof crystallizes, the model's job
+literally shrinks — the same prompt gets shorter, cheaper answers. If no
+crystal matches, the hook injects nothing and the model pays full inference,
+as today.
+
 ## Results
 
 - The loop runs end-to-end on live agent traffic: injections fire and are
