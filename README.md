@@ -73,6 +73,11 @@ as today.
   crash probe, min-of-3 cost gate vs the frozen incumbent. First proof-tier
   crystal: the GA champion (while-chunk cascade), 8192/8192 cases,
   0.0009ms vs 0.0346ms incumbent.
+- External-verifier anchoring is live: the GA champion's behavior is proven in
+  Lean 4 (`spikes/lean/`) — `cascade_computes_add : ∀ a b : Nat,
+  evalGenome cascadeGenome a b = a + b`, kernel-checked, zero `sorry`.
+  This proves the SPEC; the Python interpreter's conformance is a separate
+  replay gate.
 - The SPRT promotion gate is **built-but-unproven**: no crystal has yet survived
   SPRT to `enforced` on live traffic — that proof is accumulating, not
   assumed. Current per-crystal state: `scripts/dogfood.py`.
