@@ -1,7 +1,10 @@
 name = "addition_proof"
 version = "0.1.0"
-leanVersion = "4.13.0"
+defaultTargets = ["addition_proof"]
 
-[[require]]
-name = "std"
-scope = "leanprover-community"
+[[lean_lib]]
+name = "AdditionProof"
+
+[[lean_exe]]
+name = "addition_proof"
+root = "Main"

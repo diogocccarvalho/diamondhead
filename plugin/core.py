@@ -300,6 +300,80 @@ def proof_graduate(rule_id, oracle_name, genome=None, b_max=None):
                   "cost_ms_oracle": rec["cost_ms_oracle"]}
 
 
+def proof_widen(rule_id, oracle_name, a_max=0, b_max=None):
+    """Generalize channel: propose a wider domain for a proven crystal,
+    re-run the full gate stack over the union. Refuses when the oracle is
+    invalid on the proposed domain (no vacuous verdicts) or the genome
+    fails replay - the crystal then stays at its current domain."""
+    spec = ORACLES.get(oracle_name)
+    if not spec:
+        return False, {"reason": f"unknown oracle {oracle_name}"}
+    b_max = b_max if b_max is not None else 8191
+    live = [r for r in live_rules(load_rules()) if r.get("id") == rule_id]
+    rule = _latest_rule(rule_id)
+    genome = rule.get("genome")
+    if not genome:
+        return False, {"reason": "no genome"}
+    if not live or live[0].get("status") != "proven":
+        return False, {"reason": "crystal not proven - nothing to widen"}
+    expected = spec["expected"]
+    # oracle validity on the proposed domain: the frozen oracle must agree
+    # with the independent expected fn on sampled points of the union, or
+    # the proposal is refused before any verdict (no vacuous passes)
+    rng = random.Random(11)
+    sampled = [(rng.randint(0, a_max), rng.randint(0, b_max))
+               for _ in range(16)]
+    bad = [(a, b) for a, b in sampled
+           if spec["fn"](a, b) != expected(a, b)]
+    if bad:
+        log_event("generalize", verdict="refused", rule=rule_id,
+                  reason="oracle invalid on proposed domain",
+                  invalid_cases=bad[:3])
+        return False, {"reason": "oracle invalid on proposed domain"}
+    clean, refs = proof_audit(genome)
+    if not clean:
+        return False, {"reason": "provenance audit: oracle refs"}
+    cases = [(a, b) for a in range(0, a_max + 1) for b in range(0, b_max + 1)]
+    if len(cases) > PROOF_DOMAIN_CAP:
+        return False, {"reason": "proposed domain exceeds case cap"}
+    if len(cases) < 2:
+        return False, {"reason": "vacuous proposed domain"}
+    n = 0
+    for a, b in cases:
+        try:
+            got = interpret(genome, a, b)
+        except Exception as e:
+            log_event("generalize", verdict="fail", rule=rule_id,
+                      crash=str(e)[:60], fail_case=[a, b])
+            return False, {"reason": f"crash at a={a} b={b}"}
+        if got != expected(a, b):
+            log_event("generalize", verdict="fail", rule=rule_id,
+                      fail_case=[a, b], n=n)
+            return False, {"reason": f"does not generalize: a={a} b={b}"}
+        n += 1
+    for a, b in spec["probe"]:
+        try:
+            interpret(genome, a, b)
+        except Exception as e:
+            log_event("generalize", verdict="fail", rule=rule_id,
+                      probe_crash=str(e)[:60])
+            return False, {"reason": f"crash on off-domain probe {a},{b}"}
+    rec = {"id": rule_id, "status": "proven", "oracle": oracle_name,
+           "oracle_sha": hashlib.sha256(
+               inspect.getsource(spec["fn"]).encode()).hexdigest()[:12],
+           "genome_sha": hashlib.sha256(
+               json.dumps(genome, sort_keys=True).encode()).hexdigest()[:12],
+           "domain": f"a in [0, {a_max}], b in [0, {b_max}]",
+           "n_cases": n, "widened_from": rule.get("domain", ""),
+           "ts": time.time()}
+    append_rule(rec)
+    bump_version(rule_id, {**{k: rule.get(k) for k in CONTRACT_FIELDS},
+                           "genome": genome})
+    log_event("generalize", verdict="promote", rule=rule_id, n_cases=n,
+              a_max=a_max, b_max=b_max)
+    return True, {"n_cases": n, "domain": rec["domain"]}
+
+
 def append_rule(rec):
     with open(RULES_FILE, "a") as f:
         f.write(json.dumps(rec) + "\n")

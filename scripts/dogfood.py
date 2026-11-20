@@ -68,8 +68,12 @@ def main():
                           if x.get("id") == rid and x.get("status") == "proven"),
                          key=lambda x: x.get("ts", 0))
                 tier = (f" | PROOF: {pr.get('domain')} over {pr.get('n_cases')} "
-                        f"cases, {pr.get('cost_ms_crystal')}ms vs oracle "
-                        f"{pr.get('cost_ms_oracle')}ms")
+                        f"cases"
+                        + (f", {pr.get('cost_ms_crystal')}ms vs oracle "
+                           f"{pr.get('cost_ms_oracle')}ms"
+                           if pr.get("cost_ms_crystal") is not None else "")
+                        + (f", widened from {pr.get('widened_from')}"
+                           if pr.get("widened_from") else ""))
             print(f"  {rid}: {r.get('status')} "
                   f"(evidence {ev_n}, injections {inj}, "
                   f"consumed {ratio:.0%} | {gate}{tier})")

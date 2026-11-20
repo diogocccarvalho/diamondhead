@@ -402,6 +402,57 @@ def test_proof_station():
           core.CIRCUIT_OPEN_UNTIL == 0.0)
     core.classify_multi = _orig_classify_multi
 
+    # generalize channel: widen a proven crystal through the full gate stack
+    reset_all()
+    core.append_rule({"id": "add-w", "status": "proven", "genome": CHAMPION,
+                      "domain": "a=0, b in [0, 255]", "ts": core.time.time()})
+    ok, detail = core.proof_widen("add-w", "naive_add", a_max=3, b_max=255)
+    check("widening passes full gates on wider domain",
+          ok and detail["n_cases"] == (3 + 1) * (255 + 1))
+    pr = max((r for r in core.load_rules()
+              if r.get("id") == "add-w" and r.get("status") == "proven"),
+             key=lambda r: r["ts"])
+    check("widened domain recorded",
+          "a in [0, 3]" in pr.get("domain", "")
+          and pr.get("widened_from") == "a=0, b in [0, 255]")
+
+    # non-generalizing genome: bit-limited crystal fails on wider b
+    reset_all()
+    bit_limited = [["addifbit", i, 1 << i] for i in range(4)]  # only b<=15
+    core.append_rule({"id": "add-bits", "status": "proven",
+                      "genome": bit_limited,
+                      "domain": "a=0, b in [0, 15]", "ts": core.time.time()})
+    ok, detail = core.proof_widen("add-bits", "naive_add", a_max=0, b_max=255)
+    check("over-general proposal rejected, failing case logged",
+          not ok and "does not generalize" in detail["reason"])
+    pr = max((r for r in core.load_rules()
+              if r.get("id") == "add-bits" and r.get("status") == "proven"),
+             key=lambda r: r["ts"])
+    check("rejected proposal leaves crystal at narrow domain",
+          "a=0, b in [0, 15]" in pr.get("domain", ""))
+
+    # oracle invalid on proposed domain: refuse before any verdict
+    reset_all()
+    core.append_rule({"id": "add-x", "status": "proven", "genome": CHAMPION,
+                      "ts": core.time.time()})
+    core.ORACLES["broken_add"] = {
+        "fn": lambda a, b: a + b + 1,  # disagrees with expected everywhere
+        "expected": lambda a, b: a + b,
+        "domain": lambda: ((0, b) for b in range(4)),
+        "probe": [], "domain_text": "a=0, b in [0, 3]"}
+    ok, detail = core.proof_widen("add-x", "broken_add", a_max=2)
+    check("oracle-invalid proposal refused pre-verdict",
+          not ok and "oracle invalid" in detail["reason"])
+    del core.ORACLES["broken_add"]
+
+    # unproven crystal has nothing to widen
+    reset_all()
+    core.append_rule({"id": "add-u", "status": "hint", "genome": CHAMPION,
+                      "ts": core.time.time()})
+    ok, detail = core.proof_widen("add-u", "naive_add", a_max=1, b_max=8)
+    check("widening refuses unproven crystal",
+          not ok and "not proven" in detail["reason"])
+
 
 
 def main():
