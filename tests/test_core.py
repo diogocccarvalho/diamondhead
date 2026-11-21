@@ -378,7 +378,7 @@ def test_proof_station():
     # capture wiring: oracle-name validation
     sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
     import capture
-    ledger = Path(tmpdir) / "captures-test.md"
+    ledger = Path(tempfile.mkdtemp(prefix="dh-test-")) / "captures-test.md"
     reset_all()
     rid, genome, known = capture.capture("step1; step2", "test claim",
                                          oracle_name="naive_add", ledger=ledger)
