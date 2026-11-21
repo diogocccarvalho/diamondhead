@@ -24,7 +24,11 @@ import core  # noqa: E402
 PROOF_PATH = HERE.parent / "docs" / "captures.md"
 
 
-def capture(steps_text, claim, oracle_hint="", oracle_name=""):
+def capture(steps_text, claim, oracle_hint="", oracle_name="", ledger=None):
+    """ledger: path override for the proof-obligation ledger. Tests and any
+    sandboxed use MUST pass a scratch path — the public docs/captures.md
+    ledger is for real captures only (test fixtures in it = provenance noise)."""
+    ledger_path = Path(ledger) if ledger else PROOF_PATH
     steps = [s.strip() for s in steps_text.split(";") if s.strip()]
     genome = steps
     digest = hashlib.sha256(steps_text.encode("utf-8", "replace"))
@@ -48,7 +52,8 @@ def capture(steps_text, claim, oracle_hint="", oracle_name=""):
                          if known else
                          "unproven - register the oracle in core.ORACLES")}
     PROOF_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with PROOF_PATH.open("a") as f:
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    with ledger_path.open("a") as f:
         f.write(json.dumps(entry) + "\n")
     return rid, genome, known
 

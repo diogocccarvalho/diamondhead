@@ -378,16 +378,17 @@ def test_proof_station():
     # capture wiring: oracle-name validation
     sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
     import capture
+    ledger = Path(tmpdir) / "captures-test.md"
     reset_all()
     rid, genome, known = capture.capture("step1; step2", "test claim",
-                                         oracle_name="naive_add")
+                                         oracle_name="naive_add", ledger=ledger)
     check("capture with registered oracle tags oracle-registered",
           rid.startswith("capture-") and known)
     st = core.replay_rules()[rid]
     check("capture stores oracle name", st.get("oracle_name") == "naive_add"
           and st.get("evidence_tier") == "oracle-registered")
     rid2, _, known2 = capture.capture("step1", "pending claim",
-                                      oracle_name="not_an_oracle")
+                                      oracle_name="not_an_oracle", ledger=ledger)
     check("capture with unknown oracle stays pending", not known2)
     core.RULES_FILE.unlink()
 
